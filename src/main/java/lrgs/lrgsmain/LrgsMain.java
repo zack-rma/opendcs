@@ -19,6 +19,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.Map.Entry;
+
+import javax.net.ServerSocketFactory;
+
 import java.util.Properties;
 import java.util.Set;
 import java.net.InetAddress;
@@ -674,9 +677,9 @@ public class LrgsMain
 			InetAddress ia = 
 				(cfg.ddsBindAddr != null && cfg.ddsBindAddr.length() > 0) ?
 				InetAddress.getByName(cfg.ddsBindAddr) : null;
-
+			// TODO: check for SSL requirements
 			ddsServer = new DdsServer(cfg.ddsListenPort, ia, msgArchive,
-					cmdLineArgs.qLogger, statusProvider);
+					cmdLineArgs.qLogger, statusProvider, ServerSocketFactory.getDefault());
 			ddsServer.init();
 		}
 		catch(Exception ex)
