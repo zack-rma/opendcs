@@ -66,6 +66,11 @@ public class LddsInputStream
 
 		// Read the 4-byte sync header & error out if it doesn't match.
 		int n = istrm.read(hdr, 0, 4);
+		for(byte b: hdr) {
+			System.out.print(b);
+			System.out.print(", ");
+		}
+		System.out.println();
 		if (n < 0)
 			throw new IOException("Socket closed");
 		if (n != 4
@@ -74,7 +79,7 @@ public class LddsInputStream
 		 || hdr[2] != validSync[2]
 		 || hdr[3] != validSync[3])
 			throw new ProtocolError("Could not read valid sync pattern ("
-				+ n + " bytes read)");
+				+ n + " bytes read)"+new String(hdr,"UTF8"));
 
 		// Now have sync, block for rest of header.
 		n = istrm.read(hdr, 4, LddsMessage.ValidHdrLength - 4);
