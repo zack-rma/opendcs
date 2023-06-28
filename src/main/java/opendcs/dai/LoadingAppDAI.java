@@ -14,6 +14,7 @@ package opendcs.dai;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import decodes.sql.DbKey;
 import decodes.tsdb.CompAppInfo;
@@ -140,6 +141,14 @@ public interface LoadingAppDAI
 	 */
 	public List<TsdbCompLock> getAllCompProcLocks( )
 		throws DbIoException;
+
+	/**
+	 * Retrieve lock for single application.
+	 * @param appId
+	 * @return
+	 * @throws DbIoException
+	 */
+	public Optional<TsdbCompLock> getLockForAppId(DbKey appId) throws DbIoException;
 
 	/**
 	 * @return true if this DAO supports loading app locks.

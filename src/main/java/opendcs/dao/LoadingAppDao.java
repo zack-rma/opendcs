@@ -61,6 +61,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.TimeZone;
 
 import org.cobraparser.html.domimpl.HTMLElementBuilder.P;
@@ -703,42 +704,47 @@ public class LoadingAppDao
 	public List<TsdbCompLock> getAllCompProcLocks()
 		throws DbIoException
 	{
-		ArrayList<TsdbCompLock> ret = new ArrayList<TsdbCompLock>();
+		
 		String q = "SELECT * from CP_COMP_PROC_LOCK";
-		ResultSet rs = doQuery(q);
-		try
+		try		
 		{
-			while(rs.next())
-				ret.add(rs2lock(rs));
-		}
-		catch(SQLException ex)
-		{
-			warning("Error iterating results for query '" + q + "': " + ex);
-		}
-
-		q = "SELECT LOADING_APPLICATION_ID, LOADING_APPLICATION_NAME FROM HDB_LOADING_APPLICATION";
-		rs = doQuery(q);
-		try
-		{
-			while(rs.next())
+			List<TsdbCompLock> ret = getResults(q,rs->rs2lock(rs));
+			q = "SELECT LOADING_APPLICATION_NAME FROM HDB_LOADING_APPLICATION where LOADING_APPLICATION_ID =?";
+			for(TsdbCompLock lock: ret)
 			{
-				DbKey appId = DbKey.createDbKey(rs, 1);
-				String appName = rs.getString(2);
-				for(TsdbCompLock lock : ret)
-					if (lock.getAppId().equals(appId))
-					{
-						lock.setAppName(appName);
-						break;
-					}
+				lock.setAppName(getSingleResult(q, rs->rs.getString(1), lock.getAppId()));
 			}
+			return ret;
 		}
 		catch(SQLException ex)
 		{
-			warning("Error iterating results for query '" + q + "': " + ex);
+			throw new DbIoException("Unable to retrieve lock lists.",ex);
 		}
-
-		return ret;
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public Optional<TsdbCompLock> getLockForAppId(DbKey appId) throws DbIoException
+	{
+		try
+			{
+			String q = "SELECT * from CP_COMP_PROC_LOCK where LOADING_APPLICATION_ID=?";
+			TsdbCompLock lock = getSingleResult(q,(rs)->rs2lock(rs),appId);
+			if (lock != null)		
+			{
+				q = "SELECT LOADING_APPLICATION_NAME FROM HDB_LOADING_APPLICATION where loading_application_id=?";
+				String appName = getSingleResult(q,rs->rs.getString(1),appId);
+				lock.setAppName(appName);
+			}		
+			return Optional.ofNullable(null);
+		}
+		catch(SQLException ex)
+		{
+			throw new DbIoException("Unable to retrieve lock information. Or if lock existed.",ex);
+		}
+	}
+
 
 	@Override
 	public boolean supportsLocks()

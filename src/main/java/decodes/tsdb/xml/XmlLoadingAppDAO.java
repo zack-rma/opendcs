@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 import decodes.sql.DbKey;
 import decodes.tsdb.CompAppInfo;
@@ -228,18 +229,14 @@ public class XmlLoadingAppDAO implements LoadingAppDAI
 		ArrayList<CompAppInfo> applist = listComputationApps(false);
 		for(File lf : lockFiles)
 		{
-//System.out.println("Checking lock file '" + lf.getName() + "'");
 			String appName = lf.getName();
 			// Guaranteed from above that it ends in ".lock"
 			appName = appName.substring(0, appName.lastIndexOf('.'));
-//System.out.println("Looking for match for appName '" + appName + "'");
 			for(CompAppInfo cai : applist)
 			{
 				String fn = compressFileName(cai.getAppName());
-//System.out.println("  ... checking '" + fn + "'");
 				if (appName.equals(fn))
 				{
-//System.out.println("This lock is for app '" + appName + "'");
 					ServerLock serverLock = new ServerLock(lf.getPath());
 					// Don't care about result, the isLocked method reads the lock info.
 					serverLock.isLocked(true);
@@ -253,6 +250,23 @@ public class XmlLoadingAppDAO implements LoadingAppDAI
 		}
 		return ret;
 	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public Optional<TsdbCompLock> getLockForAppId(DbKey appId) throws DbIoException
+	{
+		List<TsdbCompLock> locks = getAllCompProcLocks();
+		for(TsdbCompLock lock: locks)
+		{
+			if(lock.getAppName().equals(appId))
+			{
+				return Optional.of(lock);
+			}
+		}
+		return Optional.empty();
+	}
+
 
 	@Override
 	public TsdbCompLock obtainCompProcLock(CompAppInfo appInfo, int pid, String host)

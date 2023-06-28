@@ -3,6 +3,7 @@ package decodes.tsdb.test;
 import ilex.util.Logger;
 
 import java.util.List;
+import java.util.Optional;
 
 import opendcs.dai.LoadingAppDAI;
 
@@ -29,21 +30,22 @@ public class ReleaseLock
 		}
 		// Note, the -a arg will have us connect to the database as the
 		// desired application.
-		LoadingAppDAI loadingAppDAO = theDb.makeLoadingAppDAO();
-		try
+		
+		try(LoadingAppDAI loadingAppDAO = theDb.makeLoadingAppDAO();)
 		{
-			List<TsdbCompLock> locks = loadingAppDAO.getAllCompProcLocks();
-			Logger.instance().info("" + locks.size() + " Locks Retrieved.");
-			for(TsdbCompLock lock : locks)
-				if (lock.getAppId() == getAppId())
-				{
-					loadingAppDAO.releaseCompProcLock(lock);
-					break;
-				}
+			Optional<TsdbCompLock> lock = loadingAppDAO.getLockForAppId(getAppId());
+			if(lock.isPresent())
+			{
+				loadingAppDAO.releaseCompProcLock(lock.get());
+			}
+			else
+			{
+				System.out.println("Application is not running.");
+			}
 		}
-		finally
+		catch(DbIoException ex)
 		{
-			loadingAppDAO.close();
+			
 		}
 	}
 	
