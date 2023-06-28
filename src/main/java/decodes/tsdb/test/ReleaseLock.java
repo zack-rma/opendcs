@@ -4,6 +4,11 @@ import ilex.util.Logger;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import opendcs.dai.LoadingAppDAI;
 
@@ -19,6 +24,7 @@ public class ReleaseLock
 		super(null);
 	}
 
+	@Override
 	protected void runApp()
 		throws Exception
 	{
@@ -33,7 +39,10 @@ public class ReleaseLock
 		
 		try(LoadingAppDAI loadingAppDAO = theDb.makeLoadingAppDAO();)
 		{
-			Optional<TsdbCompLock> lock = loadingAppDAO.getLockForAppId(getAppId());
+			final ExecutorService executor = Executors.newSingleThreadExecutor();
+			final Future<Optional<TsdbCompLock>> future = 
+					executor.submit(()->loadingAppDAO.getLockForAppId(getAppId()));
+			Optional<TsdbCompLock> lock = future.get(1, TimeUnit.SECONDS);
 			if(lock.isPresent())
 			{
 				loadingAppDAO.releaseCompProcLock(lock.get());
@@ -43,9 +52,9 @@ public class ReleaseLock
 				System.out.println("Application is not running.");
 			}
 		}
-		catch(DbIoException ex)
+		catch(TimeoutException | DbIoException ex)
 		{
-			
+			System.out.println("Unable to connect to database or get result promptly from database. Manually killing process.");
 		}
 	}
 	
