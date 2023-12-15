@@ -1,0 +1,10 @@
+name: 'Junit Report'
+description: 'Render Junit Reports into PR Comments'
+inputs:
+  show-all:
+    description: 'Include elements for passing tests'
+    required: true
+    default: false # only show failed tests by default
+runs:
+  using: 'node20'
+  main: 'index.js'

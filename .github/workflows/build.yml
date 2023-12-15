@@ -71,6 +71,8 @@ jobs:
             build/reports/**
             build/test-integration/**/tmp/configs**
             build/test-gui.webm
+      - name: Report results
+        uses: ./.github/actions/junit-report
 #docker-images:
 #  runs-on: ubuntu-latest
 #  steps:
