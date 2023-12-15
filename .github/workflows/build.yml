@@ -72,10 +72,14 @@ jobs:
             build/test-integration/**/tmp/configs**
             build/test-gui.webm
       - name: Build action
+        if: success() || failure()
         run: |
           cd .github/actions/junit-report
           npm install
       - name: Report results
+        if: success() || failure()  
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
         uses: ./.github/actions/junit-report
 #docker-images:
 #  runs-on: ubuntu-latest
