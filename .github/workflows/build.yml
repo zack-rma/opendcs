@@ -76,6 +76,7 @@ jobs:
         run: |
           cd .github/actions/junit-report
           npm install
+          npm run bundle
       - name: Report results
         if: success() || failure()  
         with:
