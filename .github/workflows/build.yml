@@ -71,6 +71,11 @@ jobs:
             build/reports/**
             build/test-integration/**/tmp/configs**
             build/test-gui.webm
+      - name: setup node
+        uses: actions/setup-node@v4.0.0
+        with:
+          node-version: 20.0
+          cache: 'npm'
       - name: Build action
         if: success() || failure()
         run: |
