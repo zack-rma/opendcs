@@ -71,6 +71,10 @@ jobs:
             build/reports/**
             build/test-integration/**/tmp/configs**
             build/test-gui.webm
+      - name: Build action
+        run: |
+          cd .github/actions/junit-report
+          npm install
       - name: Report results
         uses: ./.github/actions/junit-report
 #docker-images:
