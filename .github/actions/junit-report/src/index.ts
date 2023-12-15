@@ -13,7 +13,7 @@ try
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: 'Hello from action',
+            body: 'Hello from action running on ' + process.platform
 
         }
     )
