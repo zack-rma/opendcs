@@ -20,15 +20,15 @@ try
     const octokit: any = github.getOctokit(token);
     core.info("Hello from junit report");
 
-    let body: String = "#" + reportName + "\n";
-    body += 'Hello from action running on ' + process.platform;
+    let reportText: String = "#" + reportName + "\n";
+    reportText = reportText + 'Hello from action running on ' + process.platform;
 
     octokit.rest.issues.createComment(
         {
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: body
+            body: reportText
         }
     )
 }
