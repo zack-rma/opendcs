@@ -6,23 +6,29 @@ import * as glob from '@actions/glob'
 
 try
 {
+    
     const globber: glob.Globber = await glob.create('**/TEST-*.xml',{followSymbolicLinks:false})
     const files: string[] = await globber.glob();
     for(const file in files)
     {
-        core.info("Will process: " + file);
+        core.info("Will process: " + file[file]);
     }
 
     const context: Context = github.context;
     const token: string = core.getInput('repo-token');
+    const reportName: String = core.getInput('report-name');
     const octokit: any = github.getOctokit(token);
     core.info("Hello from junit report");
+
+    let body: String = "#" + reportName + "\n";
+    body += 'Hello from action running on ' + process.platform;
+
     octokit.rest.issues.createComment(
         {
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: 'Hello from action running on ' + process.platform
+            body: body
         }
     )
 }
