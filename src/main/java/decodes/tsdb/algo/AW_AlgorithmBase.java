@@ -1034,7 +1034,11 @@ public abstract class AW_AlgorithmBase
 		}
 	}
 
-	
+	public void setMissing(NamedVariable v, double missingValueMarker)
+	{
+		v.setValue(missingValueMarker);
+		saveOutput(v);
+	}
 	/**
 	 * Sets bits in the flags, leaving other bits alone.
 	 * @param v the named variable containing the flags

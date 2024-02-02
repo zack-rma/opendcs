@@ -685,7 +685,14 @@ debug3("Checking parm '" + parm.getRoleName() + "' with type " + parm.getParmTyp
 		if (parmRef.compParm.getAlgoParmType().startsWith("i") && app != null)
 			app.getResolver().pythonWrote(comp.getId(), parmRef.timeSeries.getTimeSeriesIdentifier().getKey());
 	}
-	
+
+	public void setMissing(String rolename, double missingValueMarker)
+	{
+		debug1("setMissing(" + rolename + ", " + missingValueMarker + ")");
+		NamedVariable nv = new NamedVariable(rolename,missingValueMarker);
+		this.setMissing(nv,missingValueMarker);
+	}
+
 	/**
 	 * Return true if the named param has a value in the current timeslice.
 	 * Return false if there is no value or it is flagged as missing or for deletion.

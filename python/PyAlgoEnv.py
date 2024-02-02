@@ -45,6 +45,9 @@ def setOutput(rolename, value):
 		return
 	algo.setOutput(rolename, value)
 
+def setMissing(rolename, missingValueMarker):
+    algo.setMissing(rolename,missingValueMarker)
+
 def isPresent(rolename):
 	return algo.isPresent(rolename)
 
