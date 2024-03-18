@@ -58,7 +58,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
 {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(OpenTimeSeriesDAO.class);
     // Open TSDB Uses CWMS 6-part Time Series Identifiers
-    protected static DbObjectCache<TimeSeriesIdentifier> cache =
+    protected final static DbObjectCache<TimeSeriesIdentifier> cache =
         new DbObjectCache<TimeSeriesIdentifier>(2 * 60 * 60 * 1000L, false); // 2 hr cache
     protected SiteDAI siteDAO = null;
     protected DataTypeDAI dataTypeDAO = null;
@@ -66,7 +66,6 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     public NumberFormat suffixFmt = NumberFormat.getIntegerInstance();
     private static final String ts_columns = "sample_time, ts_value, flags, source_id";
     private long lastCacheReload = 0L;
-//    private DbKey appId = DbKey.NullKey;
     private String appModule = null;
 
     /** data sources are immutable in the database so no need to refresh them. */
@@ -123,47 +122,73 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
 
         tsid = new CwmsTsId();
         tsid.setUniqueString(uniqueString);
-        DbKey siteId = siteDAO.lookupSiteID(tsid.getSiteName());
+        DbKey siteId = DbKey.NullKey;
+        try (SiteDAI siteDAO = db.makeSiteDAO())
+        {
+            siteId = siteDAO.lookupSiteID(tsid.getSiteName());
+        }
         if (siteId.isNull())
         {
             throw new NoSuchObjectException("No such site '" + tsid.getSiteName() + "'");
         }
         DbKey dataTypeId = tsid.getDataTypeId();
-        if (siteId.isNull())
+        if (dataTypeId == null || dataTypeId.isNull())
         {
             throw new NoSuchObjectException("No such data type for '" + uniqueString + "'");
         }
 
         Interval interval = IntervalList.instance().getByName(tsid.getInterval());
         if (interval == null)
+        {
             throw new NoSuchObjectException("No such interval '" + tsid.getInterval() + "'");
+        }
         Interval duration = IntervalList.instance().getByName(tsid.getDuration());
         if (duration == null)
+        {
             throw new NoSuchObjectException("No such duration '" + tsid.getDuration() + "'");
+        }
 
         String q = "select ts_id from ts_spec where "
-            + "SITE_ID = " + siteId
-            + " and DATATYPE_ID = " + dataTypeId
-            + " and lower(STATISTICS_CODE) = " + sqlString(tsid.getStatisticsCode().toLowerCase())
-            + " and INTERVAL_ID = " + interval.getKey()
-            + " and DURATION_ID = " + duration.getKey()
-            + " and lower(TS_VERSION) = " + sqlString(tsid.getVersion().toLowerCase());
-        ResultSet rs = doQuery(q);
+            + "SITE_ID = ?"
+            + " and DATATYPE_ID = ?"
+            + " and lower(STATISTICS_CODE) = lower(?)"
+            + " and INTERVAL_ID = ?"
+            + " and DURATION_ID = ?"
+            + " and lower(TS_VERSION) = lower(?)";
+
         try
         {
-            if (rs != null && rs.next())
+            TimeSeriesIdentifier ret = getSingleResultOr(q, rs ->
+                {
+                    try
+                    {
+                        return getTimeSeriesIdentifier(DbKey.createDbKey(rs, 1));
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new SQLException("Error retrieving TimeSeriesIdentifier", ex);
+                    }
+                },
+                null,
+                siteId, dataTypeId, tsid.getStatisticsCode(),
+                interval.getKey(), duration.getKey(), tsid.getVersion()
+            );
+            if (ret != null)
             {
-                TimeSeriesIdentifier ret = getTimeSeriesIdentifier(DbKey.createDbKey(rs, 1));
                 if (displayName != null)
+                {
                     ret.setDisplayName(displayName);
+                }
                 return ret;
             }
             else
+            {
                 throw new NoSuchObjectException("No Time Series matching '" + uniqueString + "'");
+            }
         }
         catch (SQLException ex)
         {
-            throw new DbIoException(ex.getMessage());
+            throw new DbIoException("Unable to get Time Series Identifier", ex);
         }
     }
 
@@ -171,20 +196,15 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     public TimeSeriesIdentifier getTimeSeriesIdentifier(DbKey key)
         throws DbIoException, NoSuchObjectException
     {
-        if (lastCacheReload == 0L)
-            reloadTsIdCache();
-
         TimeSeriesIdentifier ret = cache.getByKey(key);
-
         if (ret != null)
         {
-            debug3("getTimeSeriesIdentifier(ts_code=" + key
-                + ") id='" + ret.getUniqueString() + "' from cache.");
+            log.trace("getTimeSeriesIdentifier(ts_code={}) id='{}' from cache.", key, ret.getUniqueString());
             return ret;
         }
         else
         {
-            debug3("getTimeSeriesIdentifier(ts_code=" + key + ") Not in cache.");
+            log.trace("getTimeSeriesIdentifier(ts_code={}) Not in cache.", key);
         }
 
         return readTSID(key);
@@ -200,29 +220,41 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     private CwmsTsId readTSID(DbKey key)
         throws DbIoException, NoSuchObjectException
     {
-        String q = "SELECT " + ts_spec_columns + " from TS_SPEC "
-            + " where ts_id = " + key;
-
+        String q = "SELECT " + ts_spec_columns
+                 + " from TS_SPEC "
+                 + " where ts_id = ?";
         try
         {
-            long now = System.currentTimeMillis();
-            ResultSet rs = doQuery(q);
-            if (rs != null && rs.next())
+            CwmsTsId ret = getSingleResultOr(q, rs -> 
+                {
+                    try
+                    {
+                        return rs2TsId(rs, true);
+                    }
+                    catch (DbIoException | NoSuchObjectException ex)
+                    {
+                        throw new SQLException("Unable to create tsid instance.", ex);
+                    }
+                },
+                null,
+                key);
+            if (ret != null)
             {
-                CwmsTsId ret = rs2TsId(rs, true);
+                long now = System.currentTimeMillis();
                 ret.setReadTime(now);
                 cache.put(ret);
                 return ret;
             }
+            else
+            {
+                throw new NoSuchObjectException("No time-series with ts_code=" + key);
+            }
         }
         catch(Exception ex)
         {
-            System.err.println(ex.toString());
-            ex.printStackTrace(System.err);
-            throw new DbIoException(
-                "Error looking up TS Info for TS_CODE=" + key + ": " + ex);
+            throw new DbIoException("Error looking up TS Info for TS_CODE=" + key, ex);
         }
-        throw new NoSuchObjectException("No time-series with ts_code=" + key);
+        
     }
 
     /**
@@ -268,7 +300,11 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             }
         }
 
-        Site site = siteDAO.getSiteById(siteId);
+        Site site = null;
+        try (SiteDAI siteDAO = db.makeSiteDAO())
+        {
+            site = siteDAO.getSiteById(siteId);
+        }
         DataType dataType = DataType.getDataType(dataTypeId);
         if (dataType == null)
             throw new NoSuchObjectException("Invalid DataType ID = " + dataTypeId);
@@ -337,11 +373,13 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
 
             String existingUnits = ts.getUnitsAbbr();
             if (existingUnits == null || existingUnits.isEmpty() || existingUnits.equalsIgnoreCase("unknown"))
+            {
                 ts.setUnitsAbbr(tsid.getStorageUnits());
+            }
         }
         catch(NoSuchObjectException ex)
         {
-            warning("Error expanding SDI: " + ex);
+            log.warn("Error expanding SDI.", ex);
             ts.setDisplayName("unknownSite:unknownType-unknownIntv");
             ts.setUnitsAbbr("EU??");
         }
@@ -401,26 +439,26 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
 
         try
         {
-            int n[] = new int[1];
+            final CwmsTsId tsId = ctsid;
+            final UnitConverter converter = unitConverter;
+            final int n[] = new int[1];
             n[0] = 0;
-            final CwmsTsId loopTsId = ctsid;
-            final UnitConverter loopConverter = unitConverter;
             doQuery(q.toString(), rs ->
-            {
-                TimedVariable tv = rs2tv(rs, loopTsId, loopConverter);
-
-                // For computation processor, we never want to overwrite data
-                // we already have. For a report generator, we DO.
-                Date d = tv.getTime();
-                if (!overwriteExisting
-                 && ts.findWithin(d.getTime() / 1000L, 10) != null)
                 {
-                    return;
-                }
-                ts.addSample(tv);
-                n[0]++;
-            },
-            parameters.toArray(new Object[0]));
+                    TimedVariable tv = rs2tv(rs, tsId, converter);
+
+                    // For computation processor, we never want to overwrite data
+                    // we already have. For a report generator, we DO.
+                    Date d = tv.getTime();
+                    if (!overwriteExisting && ts.findWithin(d.getTime() / 1000L, 10) != null)
+                    {
+                        return;
+                    }
+
+                    ts.addSample(tv);
+                    n[0]++;
+                },
+                parameters.toArray(new Object[0]));
             return n[0];
         }
         catch (SQLException ex)
@@ -461,29 +499,32 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             + " where ts_id = " + ctsid.getKey() + " and sample_time in (";
 
         StringBuilder qb = new StringBuilder(baseQ);
-        int numFilled = 0;
+        int numFilled[] = new int[1];
+        numFilled[0] = 0;
         int numThisQuery = 0;
         for(Iterator<Date> dit = queryTimes.iterator(); dit.hasNext();)
         {
-            Date d = dit.next();
+            final Date d = dit.next();
             qb.append(d.getTime());
             if (!dit.hasNext() || ++numThisQuery >= MAX_IN_CLAUSE)
             {
                 qb.append(")");
                 try
                 {
-                    ResultSet rs = doQuery(qb.toString());
-                    while (rs != null && rs.next())
+                    final CwmsTsId tsId = ctsid;
+                    final UnitConverter converter = unitConverter;
+                    doQuery(qb.toString(), rs ->
                     {
-                        TimedVariable tv = rs2tv(rs, ctsid, unitConverter);
+                        TimedVariable tv = rs2tv(rs, tsId, converter);
 
-                        d = tv.getTime();
-                        if (ts.findWithin(d.getTime() / 1000L, 10) != null)
-                            continue;
-
+                        Date tvDate = tv.getTime();
+                        if (ts.findWithin(tvDate.getTime() / 1000L, 10) != null)
+                        {
+                            return;
+                        }
                         ts.addSample(tv);
-                        numFilled++;
-                    }
+                        numFilled[0]++;
+                    });
                 }
                 catch (SQLException ex)
                 {
@@ -497,9 +538,11 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
                 qb = new StringBuilder(baseQ);
             }
             else
+            {
                 qb.append(",");
+            }
         }
-        return numFilled;
+        return numFilled[0];
     }
 
     @Override
@@ -513,42 +556,52 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
         }
 
-        UnitConverter unitConverter = null;
-        if (ctsid.getStorageType() == 'N'
-         && ts.getUnitsAbbr() != null
-         && !ts.getUnitsAbbr().equalsIgnoreCase(ctsid.getStorageUnits()))
-            unitConverter = Database.getDb().unitConverterSet.get(
-                EngineeringUnit.getEngineeringUnit(ctsid.getStorageUnits()),
-                    EngineeringUnit.getEngineeringUnit(ts.getUnitsAbbr()));
+        final UnitConverter unitConverter = getUnitConverter(ts);
 
         String tableName = makeDataTableName(ctsid);
         String q = "select " + ts_columns + " from " + tableName
-            + " where ts_id = " + ctsid.getKey()
+            + " where ts_id = ?"
             + " and sample_time = "
             + "(select max(sample_time) from " + tableName
-            + " where ts_id = " + ctsid.getKey()
-            + " and sample_time < " + db.sqlDate(refTime) + " )";
+            + " where ts_id = ?"
+            + " and sample_time < ?";
 
         try
         {
-            ResultSet rs = doQuery(q);
-            if (rs != null && rs.next())
-            {
-                TimedVariable tv = rs2tv(rs, ctsid, unitConverter);
-                if (ts.findWithin(tv.getTime(), 10) == null)
-                    ts.addSample(tv);
-                return tv;
-            }
-            else // there is no earlier value
-                return null;
+            final CwmsTsId tsId = ctsid;
+            return getSingleResultOr(q, rs ->
+                {
+                    TimedVariable tv = rs2tv(rs, tsId, unitConverter);
+                    if (ts.findWithin(tv.getTime(), 10) == null)
+                    {
+                        ts.addSample(tv);
+                    }
+                    return tv;
+                },
+                null,
+                ctsid.getKey(), ctsid.getKey(), refTime
+            );
         }
         catch (SQLException ex)
         {
-            String msg = "getPreviousValue() Error in query '"
-                    + q + "': " + ex;
-            warning(msg);
-            throw new DbIoException(msg);
+            String msg = String.format("getPreviousValue() Error in query '%s'", q);
+            throw new DbIoException(msg, ex);
         }
+    }
+
+    private UnitConverter getUnitConverter(CTimeSeries ts)
+    {
+        final CwmsTsId ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
+        UnitConverter unitConverter = null;
+        if (ctsid.getStorageType() == 'N' && ts.getUnitsAbbr() != null
+         && !ts.getUnitsAbbr().equalsIgnoreCase(ctsid.getStorageUnits()))
+        {
+            unitConverter = Database.getDb().unitConverterSet.get(
+                                EngineeringUnit.getEngineeringUnit(ctsid.getStorageUnits()),
+                                EngineeringUnit.getEngineeringUnit(ts.getUnitsAbbr()));
+        }
+
+        return unitConverter;
     }
 
     @Override
@@ -562,41 +615,36 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
         }
 
-        UnitConverter unitConverter = null;
-        if (ctsid.getStorageType() == 'N'
-         && ts.getUnitsAbbr() != null
-         && !ts.getUnitsAbbr().equalsIgnoreCase(ctsid.getStorageUnits()))
-            unitConverter = Database.getDb().unitConverterSet.get(
-                EngineeringUnit.getEngineeringUnit(ctsid.getStorageUnits()),
-                    EngineeringUnit.getEngineeringUnit(ts.getUnitsAbbr()));
+        final UnitConverter unitConverter = getUnitConverter(ts);
 
         String tableName = makeDataTableName(ctsid);
         String q = "select " + ts_columns + " from " + tableName
-            + " where ts_id = " + ctsid.getKey()
+            + " where ts_id = ?"
             + " and sample_time = "
             + "(select min(sample_time) from " + tableName
-            + " where ts_id = " + ctsid.getKey()
-            + " and sample_time > " + db.sqlDate(refTime) + " )";
+            + " where ts_id = ?"
+            + " and sample_time > ?";
 
         try
         {
-            ResultSet rs = doQuery(q);
-            if (rs != null && rs.next())
-            {
-                TimedVariable tv = rs2tv(rs, ctsid, unitConverter);
-                if (ts.findWithin(tv.getTime(), 10) == null)
-                    ts.addSample(tv);
-                return tv;
-            }
-            else // there is no earlier value
-                return null;
+            final CwmsTsId tsId = ctsid;
+            return getSingleResultOr(q, rs ->
+                {
+                    TimedVariable tv = rs2tv(rs, tsId, unitConverter);
+                    if (ts.findWithin(tv.getTime(), 10) == null)
+                    {
+                        ts.addSample(tv);
+                    }
+                    return tv;
+                },
+                null,
+                ctsid.getKey(), ctsid.getKey(), refTime
+            );
         }
         catch (SQLException ex)
         {
-            String msg = "getPreviousValue() Error in query '"
-                    + q + "': " + ex;
-            warning(msg);
-            throw new DbIoException(msg);
+            String msg = String.format("getPreviousValue() Error in query '%s'", q);
+            throw new DbIoException(msg, ex);
         }
     }
 
@@ -648,7 +696,9 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             TimedVariable tv = ts.sampleAt(i);
             if ((VarFlags.mustWrite(tv) || VarFlags.mustDelete(tv)) // marked for modification
              && !checkSampleTime(tv, (CwmsTsId)tsid))               // settings say to ignore.
+            {
                 tv.setFlags(tv.getFlags() & ~(VarFlags.TO_DELETE|VarFlags.TO_WRITE));
+            }
         }
 
         int numNew = 0;
@@ -683,7 +733,6 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         if (daoSourceId == null)
         {
             String msg = "Cannot determine data source ID.";
-            failure(msg);
             throw new BadTimeSeriesException(msg);
         }
         Date now = new Date();
