@@ -1,6 +1,5 @@
 package opendcs.opentsdb;
 
-import ilex.util.Logger;
 import ilex.util.TextUtil;
 import ilex.var.NoConversionException;
 import ilex.var.TimedVariable;
@@ -60,8 +59,6 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     // Open TSDB Uses CWMS 6-part Time Series Identifiers
     protected final static DbObjectCache<TimeSeriesIdentifier> cache =
         new DbObjectCache<TimeSeriesIdentifier>(2 * 60 * 60 * 1000L, false); // 2 hr cache
-    protected SiteDAI siteDAO = null;
-    protected DataTypeDAI dataTypeDAO = null;
     protected Calendar utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     public NumberFormat suffixFmt = NumberFormat.getIntegerInstance();
     private static final String ts_columns = "sample_time, ts_value, flags, source_id";
@@ -72,8 +69,6 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     private static HashMap<String, TsDataSource> key2ds = new HashMap<String, TsDataSource>();
 
     private long lastTsidCacheRead = 0L;
-
-
 
     public static final long MSEC_PER_UTC_DAY = 24 * 3600 * 1000L;
 
@@ -88,11 +83,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     public OpenTimeSeriesDAO(DatabaseConnectionOwner tsdb)
     {
         super(tsdb, "OpenTimeSeriesDAO");
-        siteDAO = tsdb.makeSiteDAO();
-        dataTypeDAO = tsdb.makeDataTypeDAO();
         suffixFmt.setMinimumIntegerDigits(4);
         suffixFmt.setGroupingUsed(false);
-//        appId = tsdb.getAppId();
     }
 
     public TimeSeriesIdentifier getTimeSeriesIdentifier(String uniqueString) throws DbIoException, NoSuchObjectException
@@ -225,7 +217,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
                  + " where ts_id = ?";
         try
         {
-            CwmsTsId ret = getSingleResultOr(q, rs -> 
+            CwmsTsId ret = getSingleResultOr(q, rs ->
                 {
                     try
                     {
@@ -254,7 +246,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         {
             throw new DbIoException("Error looking up TS Info for TS_CODE=" + key, ex);
         }
-        
+
     }
 
     /**
@@ -292,10 +284,13 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         OffsetErrorAction offsetErrorAction = null;
         if (s != null && !rs.wasNull())
         {
-            try { offsetErrorAction = OffsetErrorAction.valueOf(s.toUpperCase()); }
+            try
+            {
+                offsetErrorAction = OffsetErrorAction.valueOf(s.toUpperCase());
+            }
             catch(Exception ex)
             {
-                warning("Invalid value for offsetErrorAction '" + s + "'");
+                log.warn("Invalid value for offsetErrorAction '{}'", s);
                 offsetErrorAction = null;
             }
         }
@@ -307,13 +302,19 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         }
         DataType dataType = DataType.getDataType(dataTypeId);
         if (dataType == null)
+        {
             throw new NoSuchObjectException("Invalid DataType ID = " + dataTypeId);
+        }
         Interval interval = IntervalList.instance().getById(intervalId);
         if (interval == null)
+        {
             throw new NoSuchObjectException("Invalid interval ID = " + intervalId);
+        }
         Interval duration = IntervalList.instance().getById(durationId);
         if (duration == null)
+        {
             throw new NoSuchObjectException("Invalid duration ID = " + durationId);
+        }
 
         String path = site.getPreferredName().getNameValue() + "."
             + dataType.getCode() + "."
@@ -344,9 +345,6 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     @Override
     public void close()
     {
-        siteDAO.close();
-        dataTypeDAO.close();
-
         super.close();
     }
 
@@ -354,7 +352,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     public void fillTimeSeriesMetadata(CTimeSeries ts) throws DbIoException,
         BadTimeSeriesException
     {
-        debug3("fillTimeSeriesMetadata " + ts.getBriefDescription());
+        log.trace("fillTimeSeriesMetadata for '{}'", ts.getBriefDescription());
         try
         {
             DbKey ts_code = ts.getSDI();
@@ -395,7 +393,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
 
     @Override
     public int fillTimeSeries(CTimeSeries ts, Date from, Date until,
-        boolean include_lower, boolean include_upper, boolean overwriteExisting)
+                              boolean include_lower, boolean include_upper,
+                              boolean overwriteExisting)
         throws DbIoException, BadTimeSeriesException
     {
         CwmsTsId ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
@@ -416,7 +415,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         List<Object> parameters = new ArrayList<>();
         StringBuilder q = new StringBuilder();
         q.append("select " + ts_columns + " from " + tableName
-            + " where ts_id = ?");// + ctsid.getKey();
+            + " where ts_id = ?");
         parameters.add(ctsid.getKey());
         if (from != null)
         {
@@ -455,8 +454,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         catch (SQLException ex)
         {
             String msg = "Error getting data for time series="
-                    + ctsid.getUniqueName() + ": " + ex;
-            warning(msg);
+                    + ctsid.getUniqueName();
             throw new DbIoException(msg ,ex);
         }
     }
@@ -466,7 +464,9 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         throws DbIoException, BadTimeSeriesException
     {
         if (queryTimes.size() == 0)
+        {
             return 0;
+        }
 
         CwmsTsId ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
         if (ctsid == null)
@@ -512,10 +512,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
                 }
                 catch (SQLException ex)
                 {
-                    String msg = "Error getting data for time series="
-                            + ctsid.getUniqueName() + ": " + ex;
-                    warning(msg);
-                    throw new DbIoException(msg);
+                    String msg = "Error getting data for time series="+ ctsid.getUniqueName();
+                    throw new DbIoException(msg, ex);
                 }
 
                 numThisQuery = 0;
@@ -530,8 +528,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     }
 
     @Override
-    public TimedVariable getPreviousValue(CTimeSeries ts, Date refTime)
-        throws DbIoException, BadTimeSeriesException
+    public TimedVariable getPreviousValue(CTimeSeries ts, Date refTime) throws DbIoException, BadTimeSeriesException
     {
         CwmsTsId ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
         if (ctsid == null)
@@ -643,8 +640,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             throw new BadTimeSeriesException("Cannot save time series without TSID.");
         }
 
-        debug3("Saving " + tsid.getUniqueString() + ", from cp units="
-            + ts.getUnitsAbbr() + ", required=" + tsid.getStorageUnits());
+        log.trace("Saving '{}', from cp units='{}', required='{}'",
+                  tsid.getUniqueString(), ts.getUnitsAbbr(), tsid.getStorageUnits());
 
         CwmsTsId ctsid = (CwmsTsId)tsid;
         // If we don't already have the timeseries key, either find it, or make the time series.
@@ -657,7 +654,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             }
             catch (NoSuchObjectException ex)
             {
-                info("Creating Timeseries");
+                log.info("Creating Timeseries");
                 try
                 {
                     final DbKey tmp = this.createTimeSeries(ctsid);
@@ -670,7 +667,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             }
         }
         TSUtil.convertUnits(ts, tsid.getStorageUnits());
-        debug3("After TSUtil.convertUnits, cts units=" + ts.getUnitsAbbr());
+        log.trace("After TSUtil.convertUnits, cts units={}", ts.getUnitsAbbr());
 
         String tableName = makeDataTableName(ctsid);
 
@@ -703,7 +700,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         }
         if (times.size() == 0)
         {
-            debug3(" No times marked for save or delete.");
+            log.trace(" No times marked for save or delete.");
             return;
         }
 
@@ -731,11 +728,15 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         {
             TimedVariable tv2write = ts.sampleAt(idx);
             if (!(VarFlags.mustWrite(tv2write) || VarFlags.mustDelete(tv2write)))
+            {
                 continue;
+            }
 
             DbKey tvSourceId = tv2write.getSourceId();
             if (DbKey.isNull(tvSourceId))
+            {
                 tvSourceId = daoSourceId;
+            }
 
             TimedVariable dbTv = alreadyInDb.findWithin(tv2write.getTime(), 5);
 
@@ -767,9 +768,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
                 // If existing value is protected, we may not change it!
                 else if ((dbTv.getFlags() & CwmsFlags.PROTECTED) != 0)
                 {
-                    warning("DB Value for " + tsid.getUniqueString() + " at time " +
-                        db.getLogDateFormat().format(dbTv.getTime()) + " is protected. "
-                        + " Cannot modify!");
+                    log.warn("DB Value for '{}' at time {} is protected. Cannot modify!",
+                             tsid.getUniqueString(), db.getLogDateFormat().format(dbTv.getTime()));
                     numProtected++;
                     continue;
                 }
@@ -806,25 +806,25 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             }
             catch(NoConversionException ex)
             {
-                warning("Cannot convert " + tv2write + " to number to store in database: "
-                    + ex);
+                log.atWarn()
+                   .setCause(ex)
+                   .log("Cannot convert {} to number to store in database: ", tv2write);
             }
             catch(DbIoException ex)
             {
-                warning("Error in query '" + q + "': " + ex);
+                log.atWarn()
+                   .setCause(ex)
+                   .log("Error in query '{}'", q);
                 numErrors++;
             }
         }
 
-        debug3("saveTimeSeries: New=" + numNew + ", updated=" + numUpdated
-            + ", deleted=" + numDeleted + ", protected="
-                + numProtected + ", noOverwrite=" + numNoOverwrite
-                + ", errors=" + numErrors);
+        log.trace("saveTimeSeries: New={}, updated={}, deleted={} protected={}, noOverwrite={}, errors={}",
+                  numNew, numUpdated, numDeleted, numProtected, numNoOverwrite, numErrors);
     }
 
     @Override
-    public void deleteTimeSeriesRange(CTimeSeries ts, Date from, Date until)
-        throws DbIoException, BadTimeSeriesException
+    public void deleteTimeSeriesRange(CTimeSeries ts, Date from, Date until) throws DbIoException, BadTimeSeriesException
     {
         try
         {
@@ -881,8 +881,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     }
 
     @Override
-    public void deleteTimeSeries(TimeSeriesIdentifier tsid)
-        throws DbIoException
+    public void deleteTimeSeries(TimeSeriesIdentifier tsid) throws DbIoException
     {
         final CwmsTsId ctsid = (CwmsTsId)tsid;
         try (AlarmDAI alarmDAO = db.makeAlarmDAO();
@@ -914,7 +913,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
                 }
                 catch(Exception ex)
                 {
-                    throw new Exception("deleteTimeSeries error deleting computation dependencies.",ex);
+                    throw new Exception("deleteTimeSeries error deleting computation dependencies.", ex);
                 }
 
                 try
@@ -978,11 +977,15 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     public CTimeSeries makeTimeSeries(TimeSeriesIdentifier tsid)
         throws DbIoException, NoSuchObjectException
     {
-        CTimeSeries ret = new CTimeSeries(tsid.getKey(), tsid.getInterval(),
-            tsid.getTableSelector());
-        try { fillTimeSeriesMetadata(ret); }
+        CTimeSeries ret = new CTimeSeries(tsid.getKey(), tsid.getInterval(), tsid.getTableSelector());
+        try
+        {
+            fillTimeSeriesMetadata(ret);
+        }
         catch(BadTimeSeriesException ex)
-        { throw new NoSuchObjectException(ex.getMessage()); }
+        {
+            throw new NoSuchObjectException("Unable to fill in timeseries metadata.", ex);
+        }
         return ret;
     }
 
@@ -995,21 +998,26 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
      * @param tsid the time series ID.
      * @return true if sample OK to save, false if sample should be discarded.
      */
-    private boolean checkSampleTime(TimedVariable sample, CwmsTsId tsid)
-        throws DbIoException
+    private boolean checkSampleTime(TimedVariable sample, CwmsTsId tsid) throws DbIoException
     {
         Interval intv = tsid.getIntervalOb();
 
         if (intv == null || intv.getCalMultiplier() == 0)
+        {
             return true; // Irregular, so no checking
+        }
 
         OffsetErrorAction offsetErrorAction = tsid.getOffsetErrorAction();
         if (offsetErrorAction == null)
+        {
             offsetErrorAction = OpenTsdbSettings.instance().offsetErrorActionEnum;
+        }
 
         // If (ignore) then just return true. Don't bother with checking.
         if (offsetErrorAction == OffsetErrorAction.IGNORE)
+        {
             return true;
+        }
 
         // Compute a UTC Offset as follows:
         // - UTC Offset must always be less than the interval.
@@ -1020,45 +1028,45 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         utcCal.set(Calendar.SECOND, 0);
         switch(intv.getCalConstant())
         {
-        case Calendar.MINUTE:
-            utcCal.set(Calendar.MINUTE,
-                (utcCal.get(Calendar.MINUTE) / intv.getCalMultiplier()) * intv.getCalMultiplier());
-            break;
-        case Calendar.HOUR_OF_DAY:    // truncate to top of (hour*mult)
-            utcCal.set(Calendar.MINUTE, 0);
-            utcCal.set(Calendar.HOUR_OF_DAY,
-                (utcCal.get(Calendar.HOUR_OF_DAY) / intv.getCalMultiplier()) * intv.getCalMultiplier());
-            break;
-        case Calendar.DAY_OF_MONTH: // truncate to top of (day*mult)
-            utcCal.set(Calendar.HOUR_OF_DAY, 0);
-            utcCal.set(Calendar.MINUTE, 0);
-            // Now truncate back, using number of days since epoch
-            utcCal.setTimeInMillis(
-                (daysSinceEpoch(utcCal.getTimeInMillis()) / intv.getCalMultiplier())
-                    * intv.getCalMultiplier() * MSEC_PER_UTC_DAY);
-            break;
-        case Calendar.WEEK_OF_YEAR:
-            utcCal.set(Calendar.HOUR_OF_DAY, 0);
-            utcCal.set(Calendar.MINUTE, 0);
-            utcCal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
-            utcCal.set(Calendar.WEEK_OF_YEAR,
-                (utcCal.get(Calendar.WEEK_OF_YEAR) / intv.getCalMultiplier()) * intv.getCalMultiplier());
-            break;
-        case Calendar.MONTH:
-            utcCal.set(Calendar.HOUR_OF_DAY, 0);
-            utcCal.set(Calendar.MINUTE, 0);
-            utcCal.set(Calendar.DAY_OF_MONTH, 1);
-            utcCal.set(Calendar.MONTH,
-                (utcCal.get(Calendar.MONTH) / intv.getCalMultiplier()) * intv.getCalMultiplier());
-            break;
-        case Calendar.YEAR:
-            utcCal.set(Calendar.HOUR_OF_DAY, 0);
-            utcCal.set(Calendar.MINUTE, 0);
-            utcCal.set(Calendar.DAY_OF_MONTH, 1);
-            utcCal.set(Calendar.MONTH, Calendar.JANUARY);
-            utcCal.set(Calendar.YEAR,
-                (utcCal.get(Calendar.YEAR) / intv.getCalMultiplier()) * intv.getCalMultiplier());
-            break;
+            case Calendar.MINUTE:
+                utcCal.set(Calendar.MINUTE,
+                    (utcCal.get(Calendar.MINUTE) / intv.getCalMultiplier()) * intv.getCalMultiplier());
+                break;
+            case Calendar.HOUR_OF_DAY:    // truncate to top of (hour*mult)
+                utcCal.set(Calendar.MINUTE, 0);
+                utcCal.set(Calendar.HOUR_OF_DAY,
+                    (utcCal.get(Calendar.HOUR_OF_DAY) / intv.getCalMultiplier()) * intv.getCalMultiplier());
+                break;
+            case Calendar.DAY_OF_MONTH: // truncate to top of (day*mult)
+                utcCal.set(Calendar.HOUR_OF_DAY, 0);
+                utcCal.set(Calendar.MINUTE, 0);
+                // Now truncate back, using number of days since epoch
+                utcCal.setTimeInMillis(
+                    (daysSinceEpoch(utcCal.getTimeInMillis()) / intv.getCalMultiplier())
+                        * intv.getCalMultiplier() * MSEC_PER_UTC_DAY);
+                break;
+            case Calendar.WEEK_OF_YEAR:
+                utcCal.set(Calendar.HOUR_OF_DAY, 0);
+                utcCal.set(Calendar.MINUTE, 0);
+                utcCal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                utcCal.set(Calendar.WEEK_OF_YEAR,
+                    (utcCal.get(Calendar.WEEK_OF_YEAR) / intv.getCalMultiplier()) * intv.getCalMultiplier());
+                break;
+            case Calendar.MONTH:
+                utcCal.set(Calendar.HOUR_OF_DAY, 0);
+                utcCal.set(Calendar.MINUTE, 0);
+                utcCal.set(Calendar.DAY_OF_MONTH, 1);
+                utcCal.set(Calendar.MONTH,
+                    (utcCal.get(Calendar.MONTH) / intv.getCalMultiplier()) * intv.getCalMultiplier());
+                break;
+            case Calendar.YEAR:
+                utcCal.set(Calendar.HOUR_OF_DAY, 0);
+                utcCal.set(Calendar.MINUTE, 0);
+                utcCal.set(Calendar.DAY_OF_MONTH, 1);
+                utcCal.set(Calendar.MONTH, Calendar.JANUARY);
+                utcCal.set(Calendar.YEAR,
+                    (utcCal.get(Calendar.YEAR) / intv.getCalMultiplier()) * intv.getCalMultiplier());
+                break;
         }
 
         // Compute offset in seconds. Will always be positive because we truncate utcCal backward.
@@ -1068,22 +1076,32 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         // then return true.
         if (tsid.getUtcOffset() == null)
         {
-debug1("Time series " + tsid.getUniqueString() + " setting new UTC Offset = " + offset);
-            String q = "update ts_spec set utc_offset = " + offset;
-            doModify(q);
+            log.debug("Time series '{}' setting new UTC Offset = '{}'", tsid.getUniqueString(), offset);
+            String q = "update ts_spec set utc_offset = ?";
+            try
+            {
+                doModify(q, offset);
+            }
+            catch (SQLException ex)
+            {
+                throw new DbIoException("Unable to set utc_offset", ex);
+            }
             tsid.setUtcOffset(offset);
             return true;
         }
-else
-debug1("Time series " + tsid.getUniqueString() + " already has offset = "
-+ tsid.getUtcOffset() + ", new computed offset=" + offset);
-
+        else
+        {
+            log.debug("Time series '{}' already has offset = '{}', new computed offset='{}'",
+                      tsid.getUniqueString(), tsid.getUtcOffset(), offset);
+        }
         // Else check against the stored utc offset in seconds.
         int offsetError = offset - tsid.getUtcOffset();
         boolean violation = (offsetError != 0);
 
         if (!violation)
+        {
             return true; // UTC Offsets are exactly equal!
+        }
 
 
         if (intv.getCalConstant() == Calendar.MINUTE
@@ -1111,7 +1129,9 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
                 // It may span a DST change.
                 if (allowDstVariation &&
                     (offsetError == -3600 || offsetError == 3600))
+                {
                     violation = false;
+                }
 
                 //TODO Consider use case where end of month is stored.
                 // In march offset is 30d (31-1). In feb this is 27.
@@ -1142,11 +1162,13 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         }
         if (violation)
         {
-            String msg = "Offset violation in time series '" + tsid.getUniqueName()
-                + "' stored offset=" + tsid.getUtcOffset()
-                + ", computed offset=" + offset
-                + " at time " + db.getLogDateFormat().format(sample.getTime());
-
+            final StringBuilder msg = new StringBuilder(
+                  "Offset violation in time series '{}' stored offset={}, computed offset={} at time {}");
+            List<Object> logParameters = new ArrayList<>();
+            logParameters.add(tsid.getUniqueName());
+            logParameters.add(tsid.getUtcOffset());
+            logParameters.add(offset);
+            logParameters.add(db.getLogDateFormat().format(sample.getTime()));
             if (offsetErrorAction == OffsetErrorAction.ROUND)
             {
                 // utcCal stores the time before the sample time.
@@ -1158,11 +1180,14 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
                     ((utcCal.getTimeInMillis() - sample.getTime().getTime()) / 1000L);
                 sample.setTime(offset < afterOffset ? before : after);
                 violation = false;
-                warning(msg + " Rounded to " + db.getLogDateFormat().format(sample.getTime()));
+                msg.append(" Rounded to {}");
+                logParameters.add(db.getLogDateFormat().format(sample.getTime()));
+                log.warn(msg.toString(), logParameters.toArray(new Object[0]));
             }
             else if (offsetErrorAction == OffsetErrorAction.REJECT)
             {
-                warning(msg + " -- REJECTING.");
+                msg.append(" -- REJECTING.");
+                log.warn(msg.toString(), logParameters.toArray(new Object[0]));
                 return false;
             }
         }
@@ -1174,15 +1199,18 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         return (int)(msecTime /= MSEC_PER_UTC_DAY);
     }
 
-    public String makeDataTableName(CwmsTsId tsid)
-        throws DbIoException
+    public String makeDataTableName(CwmsTsId tsid) throws DbIoException
     {
         int tableNum = tsid.getStorageTable();
         if (tableNum == -1)
+        {
             tableNum = allocateTable(tsid);
+        }
 
-        return (tsid.getStorageType() == 'N' ? "TS_NUM_" : "TS_STRING_")
-            + suffixFmt.format(tableNum);
+        return (tsid.getStorageType() == 'N'
+                    ? "TS_NUM_"
+                    : "TS_STRING_")
+              + suffixFmt.format(tableNum);
     }
 
     /**
@@ -1192,8 +1220,7 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
      * @return
      * @throws DbIoException
      */
-    private int allocateTable(CwmsTsId tsid)
-        throws DbIoException
+    private int allocateTable(CwmsTsId tsid) throws DbIoException
     {
         String q = "select * from storage_table_list "
             + "where storage_type = '" + tsid.getStorageType() + "' "
@@ -1225,11 +1252,13 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
                 return tableNum;
             }
             else
+            {
                 throw new DbIoException("No storage tables available!");
+            }
         }
         catch (SQLException ex)
         {
-            throw new DbIoException(ex.getMessage());
+            throw new DbIoException("Unable to allocate storage table", ex);
         }
     }
 
@@ -1256,17 +1285,25 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         {
             double d = rs.getDouble(2);
             if (unitConverter != null)
-                try { d = unitConverter.convert(d); }
+            {
+                try
+                {
+                    d = unitConverter.convert(d);
+                }
                 catch(Exception ex)
                 {
-                    warning("Cannot convert value for " + ctsid.getUniqueName()
-                        + " with unit converter from " + unitConverter.getFromAbbr()
-                        + " to " + unitConverter.getToAbbr() + ": " + ex);
+                    log.atWarn()
+                       .setCause(ex)
+                       .log("Cannot convert value for '{}' with unit converter from {} to {}",
+                            ctsid.getUniqueName(), unitConverter.getToAbbr(), unitConverter.getToAbbr());
                 }
+            }
             tv = new TimedVariable(d);
         }
         else
+        {
             tv = new TimedVariable(rs.getString(2));
+        }
         tv.setTime(timeStamp);
         tv.setFlags((int)(rs.getLong(3) & 0xffffffffL));
         tv.setSourceId(DbKey.createDbKey(rs, 4));
@@ -1279,10 +1316,14 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
     {
         // MJM 20161025 don't reload more if already done within threshold.
         if (System.currentTimeMillis() - lastCacheReload > cacheReloadMS)
+        {
             reloadTsIdCache();
+        }
         ArrayList<TimeSeriesIdentifier> ret = new ArrayList<TimeSeriesIdentifier>();
         for (Iterator<TimeSeriesIdentifier> tsidit = cache.iterator(); tsidit.hasNext(); )
+        {
             ret.add(tsidit.next());
+        }
         return ret;
     }
 
@@ -1291,7 +1332,9 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         throws DbIoException
     {
         if (forceRefresh)
+        {
             lastCacheReload = 0L;
+        }
         return listTimeSeries();
     }
 
@@ -1313,16 +1356,15 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
                 }
                 catch(NoSuchObjectException ex)
                 {
-                    warning("Cannot create tsid for key=" + rs.getLong(1) + ": " + ex + " -- skipped.");
+                    log.atWarn()
+                       .setCause(ex)
+                       .log("Cannot create tsid for key={} -- skipped", rs.getLong(1));
                 }
             }
         }
         catch(Exception ex)
         {
-            System.err.println(ex.toString());
-            ex.printStackTrace(System.err);
-            throw new DbIoException(
-                "Error reading TS_SPEC table: " + ex);
+            throw new DbIoException("Error reading TS_SPEC table.", ex);
         }
         lastCacheReload = System.currentTimeMillis();
     }
@@ -1342,34 +1384,41 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         DbKey siteId = Constants.undefinedId;
         Site site = tsid.getSite();
         if (site != null)
+        {
             siteId = site.getId();
+        }
         else
         {
-            siteId = siteDAO.lookupSiteID(tsid.getSiteName());
-            if (siteId.isNull())
-                throw new NoSuchObjectException("No such site for tsid '" + tsid.getUniqueString() + "'");
-            tsid.setSite(siteDAO.getSiteById(siteId));
+            try (SiteDAI siteDAO = db.makeSiteDAO())
+            {
+                siteId = siteDAO.lookupSiteID(tsid.getSiteName());
+                if (siteId.isNull())
+                {
+                    throw new NoSuchObjectException("No such site for tsid '" + tsid.getUniqueString() + "'");
+                }
+                tsid.setSite(siteDAO.getSiteById(siteId));
+            }
         }
         DataType dataType = ctsid.getDataType();
         if (DbKey.isNull(dataType.getId()))
         {
-            DataTypeDAI dtDAO = db.makeDataTypeDAO();
-            try
+
+            try (DataTypeDAI dtDAO = db.makeDataTypeDAO();)
             {
                 dtDAO.writeDataType(dataType); // write will set the id in the object
-            }
-            finally
-            {
-                dtDAO.close();
             }
         }
         Interval interval = IntervalList.instance().getByName(ctsid.getInterval());
         if (interval == null)
+        {
             throw new NoSuchObjectException("Invalid interval in tsid '" + tsid.getUniqueString() + "'");
+        }
         DbKey intervalId = interval.getKey();
         Interval duration = IntervalList.instance().getByName(ctsid.getDuration());
         if (duration == null)
+        {
             throw new NoSuchObjectException("Invalid duration in tsid '" + tsid.getUniqueString() + "'");
+        }
         DbKey durationId = duration.getKey();
         String storageUnits = ctsid.getStorageUnits();
         if (storageUnits == null)
@@ -1378,20 +1427,26 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
             String pgName = OpenTsdbSettings.instance().storagePresentationGroup;
             PresentationGroup dbpg = db.presentationGroupList.find(pgName);
             if (dbpg == null)
+            {
                 throw new DbIoException("No such storagePresentationGroup '"
                     + pgName + "'");
+            }
             DataPresentation dp = dbpg.findDataPresentation(dataType);
             if (dp == null)
             {
                 int idx = dataType.getCode().indexOf('-');
                 String baseCode = dataType.getCode().substring(0,idx);
                 if (idx != -1)
+                {
                     dp = dbpg.findDataPresentation(
                         DataType.getDataType(dataType.getStandard(),
                             baseCode));
+                }
                 if (dp == null)
+                {
                     throw new NoSuchObjectException("No entry in presentation group '"
                         + pgName + "' for datatype " + dataType + ", or its subtype.");
+                }
             }
             storageUnits = dp.getUnitsAbbr();
             ctsid.setStorageUnits(storageUnits);
@@ -1441,19 +1496,20 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
      * @return the TsDataSource object or null if it doesn't exist and can't be created.
      * @throws DbIoException on SQL Error
      */
-    public TsDataSource getTsDataSource()
-        throws DbIoException
+    public TsDataSource getTsDataSource() throws DbIoException
 
     {
         if (DbKey.isNull(db.getAppId()))
         {
-            failure("getTsDataSource() Cannot retrieve data source record when appId is null.");
+            log.error("getTsDataSource() Cannot retrieve data source record when appId is null.");
             return null;
         }
 
         String key = db.getAppId().toString();
         if (appModule != null)
+        {
             key = key + "-" + appModule;
+        }
         TsDataSource ret = key2ds.get(key);
         if (ret == null)
         {
@@ -1514,7 +1570,7 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         }
         catch (SQLException ex)
         {
-            throw new DbIoException("Error listing TSDB_DATA_SOURCE: " + ex);
+            throw new DbIoException("Error listing TSDB_DATA_SOURCE", ex);
         }
 
         return ret;
@@ -1541,7 +1597,7 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         }
         catch(SQLException ex)
         {
-            throw new DbIoException("Exception in query '" + q + "': " + ex);
+            throw new DbIoException("Exception in query '" + q + "'", ex);
         }
 
         return ret;
@@ -1552,23 +1608,39 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
             throws DbIoException, NoSuchObjectException, BadTimeSeriesException
     {
         if (!(tsid instanceof CwmsTsId))
+        {
             throw new BadTimeSeriesException("OpenTSDB uses CWMS TSIDs");
+        }
         CwmsTsId ctsid = (CwmsTsId)tsid;
 
         if (DbKey.isNull(tsid.getKey()))
+        {
             throw new NoSuchObjectException("Cannot modify TSID with no key!");
+        }
         if (tsid.getSite() == null)
+        {
             throw new BadTimeSeriesException("Cannot save TSID without Site!");
+        }
         if (DbKey.isNull(tsid.getDataTypeId()))
+        {
             throw new BadTimeSeriesException("Cannot save TSID without Data Type!");
+        }
         if (ctsid.getParamType() == null || ctsid.getParamType().trim().length() == 0)
+        {
             throw new BadTimeSeriesException("Cannot save TSID without Statistics Code!");
+        }
         if (ctsid.getIntervalOb() == null)
+        {
             throw new BadTimeSeriesException("Cannot save TSID without Interval!");
+        }
         if (ctsid.getDurationOb() == null)
+        {
             throw new BadTimeSeriesException("Cannot save TSID without Duration!");
+        }
         if (ctsid.getVersion() == null || ctsid.getVersion().trim().length() == 0)
+        {
             throw new BadTimeSeriesException("Cannot save TSID without Version!");
+        }
 
 
         String q = "update ts_spec set ";
@@ -1679,8 +1751,7 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
 
 
     @Override
-    public DataCollection getNewData(DbKey applicationId)
-        throws DbIoException
+    public DataCollection getNewData(DbKey applicationId) throws DbIoException
     {
         // Reload the TSID cache every hour.
         if (System.currentTimeMillis() - lastTsidCacheRead > 3600000L)
@@ -1701,8 +1772,10 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         String what = "Preparing min statement query";
         String failTimeClause = "";
         if (DecodesSettings.instance().retryFailedComputations)
+        {
             failTimeClause = " and (a.FAIL_TIME is null OR "
                 + System.currentTimeMillis() + " -  a.FAIL_TIME >= 3600000)";
+        }
         String getMinStmtQuery = "select min(a.record_num) from cp_comp_tasklist a "
                 + "where a.LOADING_APPLICATION_ID = " + applicationId
                 + failTimeClause;
@@ -1734,7 +1807,7 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
 
             if (rs == null || !rs.next())
             {
-                debug1("No new data for appId=" + applicationId);
+                log.debug("No new data for appId={}", applicationId);
                 ((TimeSeriesDb)db).reclaimTasklistSpace(this);
                 return dataCollection;
             }
@@ -1742,16 +1815,18 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
             minRecNum = rs.getInt(1);
             if (rs.wasNull())
             {
-                debug1("No new data for appId=" + applicationId);
+                log.debug("No new data for appId={}", applicationId);
                 minRecNum = -1;
                 ((TimeSeriesDb)db).reclaimTasklistSpace(this);
                 return dataCollection;
             }
-            debug3("minRecNum=" + minRecNum);
+            log.trace("minRecNum={}", minRecNum);
         }
         catch(SQLException ex)
         {
-            warning("getNewData error while" + what + ": " + ex);
+            log.atWarn()
+               .setCause(ex)
+               .log("getNewData error while {}", what);
             return dataCollection;
         }
 
@@ -1760,7 +1835,7 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
         try
         {
             what = "Executing '" + getTaskListStmtQuery + "'";
-            debug3(what);
+            log.trace(what);
             ResultSet rs = doQuery(getTaskListStmtQuery);
             while (rs.next())
             {
@@ -1783,14 +1858,17 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
 
             // Process the real-time records collected above.
             for(TasklistRec rec : tasklistRecs)
+            {
                 processTasklistEntry(rec, dataCollection, rrhandle, badRecs, applicationId);
+            }
 
             dataCollection.setTasklistHandle(rrhandle);
 
             // Delete the bad tasklist recs, 250 at a time.
             if (badRecs.size() > 0)
-                Logger.instance().debug1("getNewDataSince deleting " + badRecs.size()
-                    + " bad tasklist records.");
+            {
+                log.debug("getNewDataSince deleting {} bad tasklist records.", badRecs.size());
+            }
             while (badRecs.size() > 0)
             {
                 StringBuilder inList = new StringBuilder();
@@ -1806,33 +1884,33 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
                     + "where RECORD_NUM IN (" + inList.toString() + ")";
                 doModify(q);
                 for(int i=0; i<x; i++)
+                {
                     badRecs.remove(0);
+                }
             }
 
             // Show each tasklist entry in the log if we're at debug level 3
-            if (Logger.instance().getMinLogPriority() <= Logger.E_DEBUG3)
+            if (log.isTraceEnabled())
             {
                 List<CTimeSeries> allts = dataCollection.getAllTimeSeries();
-                debug3("getNewData, returning " + allts.size() + " TimeSeries.");
+                log.trace("getNewData, returning {} TimeSeries.", allts.size());
                 for(CTimeSeries ts : allts)
-                    debug3("ts " + ts.getTimeSeriesIdentifier().getUniqueString() + " "
-                        + ts.size() + " values.");
+                {
+                    log.trace("ts '{}' had {} values.", ts.getTimeSeriesIdentifier().getUniqueString(), ts.size());
+                }
             }
 
             return dataCollection;
         }
         catch(SQLException ex)
         {
-            System.err.println("Error while " + what + ": " + ex);
-            ex.printStackTrace();
-            throw new DbIoException("Error while " + what + ": " + ex);
+            throw new DbIoException("Error while " + what, ex);
         }
     }
 
 
-    private void processTasklistEntry(TasklistRec rec,
-        DataCollection dataCollection, RecordRangeHandle rrhandle,
-        ArrayList<Integer> badRecs, DbKey applicationId)
+    private void processTasklistEntry(TasklistRec rec, DataCollection dataCollection, RecordRangeHandle rrhandle,
+                                      ArrayList<Integer> badRecs, DbKey applicationId)
         throws DbIoException
     {
         // Find time series if already in data collection.
@@ -1854,24 +1932,32 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
                 cts.setUnitsAbbr(tsid.getStorageUnits());
                 if (((TimeSeriesDb)db).fillDependentCompIds(cts, applicationId, this) == 0)
                 {
-                    warning("Deleting tasklist rec for '" + tsid.getUniqueString()
-                        + "' because no dependent comps.");
+                    log.warn("Deleting tasklist rec for '{}' because no dependent comps.", tsid.getUniqueString());
                     if (badRecs != null)
+                    {
                         badRecs.add(rec.getRecordNum());
+                    }
                     return;
                 }
 
-                try { dataCollection.addTimeSeries(cts); }
+                try
+                {
+                    dataCollection.addTimeSeries(cts);
+                }
                 catch(decodes.tsdb.DuplicateTimeSeriesException ex)
                 { // won't happen -- already verified it's not there.
+                    log.atError()
+                       .setCause(ex)
+                       .log("Unlikely error has happened.");
                 }
             }
             catch(NoSuchObjectException ex)
             {
-                warning("Deleting tasklist rec for non-existent ts_code "
-                    + rec.getSdi());
+                log.warn("Deleting tasklist rec for non-existent ts_code {}", rec.getSdi());
                 if (badRecs != null)
+                {
                     badRecs.add(rec.getRecordNum());
+                }
                 return;
             }
         }
@@ -1889,18 +1975,16 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
             cts.addSample(tv);
             // Remember which tasklist records are in this timeseries.
             cts.addTaskListRecNum(rec.getRecordNum());
-            debug3("Added value " + tv + " to time series "
-                + cts.getTimeSeriesIdentifier().getUniqueString()
-                + " flags=0x" + Integer.toHexString(tv.getFlags())
-                + " cwms qualcode=0x" + Long.toHexString(rec.getQualityCode()));
+            log.trace("Added value {} to time series '{}' flags=0x{} cwms qualcode=0x{}",
+                      tv, cts.getTimeSeriesIdentifier().getUniqueString(),
+                      Integer.toHexString(tv.getFlags()),Long.toHexString(rec.getQualityCode()));
         }
         else
         {
             VarFlags.setWasDeleted(tv);
-            warning("Discarding deleted value " + tv.toString()
-                + " for time series " + cts.getTimeSeriesIdentifier().getUniqueString()
-                + " flags=0x" + Integer.toHexString(tv.getFlags())
-                + " cwms qualcode=0x" + Long.toHexString(rec.getQualityCode()));
+            log.trace("Discarding deleted value {} for time series '{}' flags=0x{} cwms qualcode=0x{}",
+                      tv.toString(), cts.getTimeSeriesIdentifier().getUniqueString(),
+                      Integer.toHexString(tv.getFlags()), Long.toHexString(rec.getQualityCode()));
         }
     }
 }
