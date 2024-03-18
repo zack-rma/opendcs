@@ -410,15 +410,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             throw new BadTimeSeriesException("Could not retrieve timeseries meta data. TimeSeriesIdentifier is not present.");
         }
 
-        UnitConverter unitConverter = null;
-        if (ctsid.getStorageType() == 'N'
-         && ts.getUnitsAbbr() != null
-         && !ts.getUnitsAbbr().equalsIgnoreCase(ctsid.getStorageUnits()))
-        {
-            unitConverter = Database.getDb().unitConverterSet.get(
-                EngineeringUnit.getEngineeringUnit(ctsid.getStorageUnits()),
-                    EngineeringUnit.getEngineeringUnit(ts.getUnitsAbbr()));
-        }
+        final UnitConverter unitConverter = getUnitConverter(ts);
 
         String tableName = makeDataTableName(ctsid);
         List<Object> parameters = new ArrayList<>();
@@ -440,12 +432,11 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         try
         {
             final CwmsTsId tsId = ctsid;
-            final UnitConverter converter = unitConverter;
             final int n[] = new int[1];
             n[0] = 0;
             doQuery(q.toString(), rs ->
                 {
-                    TimedVariable tv = rs2tv(rs, tsId, converter);
+                    TimedVariable tv = rs2tv(rs, tsId, unitConverter);
 
                     // For computation processor, we never want to overwrite data
                     // we already have. For a report generator, we DO.
@@ -484,13 +475,7 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
             ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
         }
 
-        UnitConverter unitConverter = null;
-        if (ctsid.getStorageType() == OpenTsdb.TABLE_TYPE_NUMERIC
-         && ts.getUnitsAbbr() != null
-         && !ts.getUnitsAbbr().equalsIgnoreCase(ctsid.getStorageUnits()))
-            unitConverter = Database.getDb().unitConverterSet.get(
-                EngineeringUnit.getEngineeringUnit(ctsid.getStorageUnits()),
-                    EngineeringUnit.getEngineeringUnit(ts.getUnitsAbbr()));
+        final UnitConverter unitConverter = getUnitConverter(ts);
 
         String tableName = makeDataTableName(ctsid);
 
@@ -512,10 +497,9 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
                 try
                 {
                     final CwmsTsId tsId = ctsid;
-                    final UnitConverter converter = unitConverter;
                     doQuery(qb.toString(), rs ->
                     {
-                        TimedVariable tv = rs2tv(rs, tsId, converter);
+                        TimedVariable tv = rs2tv(rs, tsId, unitConverter);
 
                         Date tvDate = tv.getTime();
                         if (ts.findWithin(tvDate.getTime() / 1000L, 10) != null)
@@ -593,7 +577,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
     {
         final CwmsTsId ctsid = (CwmsTsId)ts.getTimeSeriesIdentifier();
         UnitConverter unitConverter = null;
-        if (ctsid.getStorageType() == 'N' && ts.getUnitsAbbr() != null
+        if (ctsid.getStorageType() == OpenTsdb.TABLE_TYPE_NUMERIC
+         && ts.getUnitsAbbr() != null
          && !ts.getUnitsAbbr().equalsIgnoreCase(ctsid.getStorageUnits()))
         {
             unitConverter = Database.getDb().unitConverterSet.get(
