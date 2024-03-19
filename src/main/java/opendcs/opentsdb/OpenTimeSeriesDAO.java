@@ -13,8 +13,11 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +51,7 @@ import opendcs.dai.CompDependsNotifyDAI;
 import opendcs.dai.DataTypeDAI;
 import opendcs.dai.SiteDAI;
 import opendcs.dai.TimeSeriesDAI;
+import opendcs.dao.CompDependsNotifyDAO;
 import opendcs.dao.DaoBase;
 import opendcs.dao.DatabaseConnectionOwner;
 import opendcs.dao.DbObjectCache;
@@ -1643,8 +1647,8 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         }
 
 
-        String q = "update ts_spec set ";
-        int n = 0;
+        StringBuilder q = new StringBuilder("update ts_spec set ");
+        Map<String,Object> fields = new LinkedHashMap<>();
 
         // Read the existing tsid with this key
         CwmsTsId existing = this.readTSID(tsid.getKey());
@@ -1653,94 +1657,110 @@ public class OpenTimeSeriesDAO extends DaoBase implements TimeSeriesDAI
         // add a set clause to the update statement and increment 'n'.
         if (!tsid.getSite().getKey().equals(existing.getSite().getKey()))
         {
-            q = q + (n>0?", ":"") + "site_id = " + tsid.getSite().getKey();
-            n++;
+            fields.put("site_id",tsid.getSite().getId());
         }
         if (!tsid.getDataTypeId().equals(existing.getDataTypeId()))
         {
-            q = q + (n>0?", ":"") + "datatype_id = " + tsid.getDataTypeId();
-            n++;
+            fields.put("datatype_id", tsid.getDataTypeId());
         }
         if (!ctsid.getParamType().equals(existing.getParamType()))
         {
-            q = q + (n>0?", ":"") + "statistics_code = " + sqlString(ctsid.getParamType());
-            n++;
+            fields.put("statistics_code",ctsid.getParamType());
         }
         if (!ctsid.getIntervalOb().getKey().equals(existing.getIntervalOb().getKey()))
         {
-            q = q + (n>0?", ":"") + "interval_id = " + ctsid.getIntervalOb().getKey();
-            n++;
+            fields.put("interval_id", ctsid.getIntervalOb().getKey());
         }
         if (!ctsid.getDurationOb().getKey().equals(existing.getDurationOb().getKey()))
         {
-            q = q + (n>0?", ":"") + "duration_id = " + ctsid.getDurationOb().getKey();
-            n++;
+            fields.put("duration_id", ctsid.getDurationOb().getKey());
         }
         if (!ctsid.getVersion().equals(existing.getVersion()))
         {
-            q = q + (n>0?", ":"") + "ts_version = " + sqlString(ctsid.getVersion());
-            n++;
+            fields.put("ts_version", ctsid.getVersion());
         }
         if (ctsid.isActive() != existing.isActive())
         {
-            q = q + (n>0?", ":"") + "activeFlag = " + sqlBoolean(ctsid.isActive());
-            n++;
+            fields.put("activeFlag", ctsid.isActive());
         }
         if (!ctsid.getStorageUnits().equals(existing.getStorageUnits()))
         {
-            q = q + (n>0?", ":"") + "storage_units = " + sqlString(ctsid.getStorageUnits());
-            n++;
+            fields.put("storage_units", ctsid.getStorageUnits());
         }
         if (ctsid.getStorageTable() != existing.getStorageTable())
         {
-            q = q + (n>0?", ":"") + "storage_table = " + ctsid.getStorageTable();
-            n++;
+            fields.put("storage_table", ctsid.getStorageTable());
         }
         if (!TextUtil.strEqualNE(ctsid.getDescription(), existing.getDescription()))
         {
             String desc = ctsid.getDescription();
             if (desc != null && desc.trim().length() == 0)
+            {
                 desc = null;
-
-            q = q + (n>0?", ":"") + "description = " + sqlString(desc);
-            n++;
+            }
+            fields.put("description", desc);
         }
         if (!TextUtil.intEqual(ctsid.getUtcOffset(),existing.getUtcOffset()))
         {
-            q = q + (n>0?", ":"") + "utc_offset = " + ctsid.getUtcOffset();
-            n++;
+            fields.put("utc_offset", ctsid.getUtcOffset());
         }
         if (ctsid.isAllowDstOffsetVariation() != existing.isAllowDstOffsetVariation())
         {
-            q = q + (n>0?", ":"") + "allow_dst_offset_variation = "
-                + sqlBoolean(ctsid.isAllowDstOffsetVariation());
-            n++;
+            fields.put("allow_dst_offset_variation", ctsid.isAllowDstOffsetVariation());
         }
         if (ctsid.getOffsetErrorAction() != existing.getOffsetErrorAction())
         {
-            String action = ctsid.getOffsetErrorAction().toString();
-            q = q + (n>0?", ":"") + "offset_error_action = " + sqlString(action);
-            n++;
+            fields.put("offset_error_action", ctsid.getOffsetErrorAction().toString());
         }
 
-        if (n == 0)
-            return; // Nothing has changed.
-        q = q + ", modify_time = " + System.currentTimeMillis();
-        q = q + " where ts_id = " + tsid.getKey();
-
-        doModify(q);
-
-        // Now update the cache.
-        cache.remove(tsid.getKey());
-        cache.put(ctsid);
-
-        try (CompDependsNotifyDAI dai = db.makeCompDependsNotifyDAO())
+        if (fields.isEmpty())
         {
-            CpDependsNotify cdn = new CpDependsNotify();
-            cdn.setKey(ctsid.getKey());
-            cdn.setEventType(CpDependsNotify.TS_MODIFIED);
-            dai.saveRecord(cdn);
+            return; // Nothing has changed.
         }
+        fields.put("modify_time", System.currentTimeMillis());
+
+        Iterator<String> columnSet = fields.keySet().iterator();
+        while(columnSet.hasNext())
+        {
+            q.append(columnSet.next()).append("=?");
+            if(columnSet.hasNext())
+            {
+                q.append(",");
+            }
+            q.append(" ");
+        }
+        q.append(" where ts_id = ?");
+        List<Object> parameters =
+                     fields.entrySet()
+                           .stream()
+                           .map(e -> e.getValue())
+                           .collect(Collectors.toList());
+        parameters.add(tsid.getKey());
+        try
+        {
+            inTransaction(dao ->
+            {
+
+                dao.doModify(q.toString(), parameters.toArray(new Object[0]));
+                try (CompDependsNotifyDAO dai = (CompDependsNotifyDAO)db.makeCompDependsNotifyDAO())
+                {
+                    dai.inTransactionOf(dao);
+                    CpDependsNotify cdn = new CpDependsNotify();
+                    cdn.setKey(ctsid.getKey());
+                    cdn.setEventType(CpDependsNotify.TS_MODIFIED);
+                    dai.saveRecord(cdn);
+
+                    // Now update the cache.
+                    cache.remove(tsid.getKey());
+                    cache.put(ctsid);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            throw new DbIoException("Unable to modify timeseries definition.", ex);
+        }
+
     }
 
     /*

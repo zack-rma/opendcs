@@ -1,9 +1,9 @@
 package org.opendcs.dao;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.opendcs.fixtures.assertions.TimeSeries.assertEquals;
-import static org.opendcs.fixtures.helpers.TestResources.getResource;
 
 import java.io.InputStream;
 import java.util.Collection;
@@ -19,12 +19,15 @@ import org.opendcs.fixtures.annotations.DecodesConfigurationRequired;
 import org.opendcs.fixtures.annotations.EnableIfTsDb;
 import org.opendcs.fixtures.helpers.TestResources;
 
+import decodes.cwms.CwmsTsId;
+import decodes.sql.DbKey;
 import decodes.tsdb.BadTimeSeriesException;
 import decodes.tsdb.CTimeSeries;
 import decodes.tsdb.DbIoException;
 import decodes.tsdb.TimeSeriesDb;
 import decodes.tsdb.TsImporter;
 import opendcs.dai.TimeSeriesDAI;
+import opendcs.opentsdb.OffsetErrorAction;
 
 @DecodesConfigurationRequired({
     "shared/test-sites.xml"})
@@ -47,7 +50,7 @@ public class TimeSeriesDaoIT extends AppTestBase
     @EnableIfTsDb
     public void test_timeseries_opertions(String inputFile) throws Exception
     {
-        TsImporter importer = new TsImporter(TimeZone.getTimeZone("UTC"), null, (tsIdStr) -> 
+        TsImporter importer = new TsImporter(TimeZone.getTimeZone("UTC"), null, (tsIdStr) ->
         {
             try
             {
@@ -67,18 +70,38 @@ public class TimeSeriesDaoIT extends AppTestBase
                 tsDao.saveTimeSeries(tsIn);
                 final CTimeSeries result = tsDao.makeTimeSeries(tsIn.getTimeSeriesIdentifier());
                 tsDao.fillTimeSeries(result,
-                                     tsIn.sampleAt(0).getTime(), 
+                                     tsIn.sampleAt(0).getTime(),
                                      tsIn.sampleAt(tsIn.size()-1).getTime(),
                                       true, true, false);
                 assertEquals(tsIn, result, "Timeseries round trip did not work.");
                 tsDao.deleteTimeSeries(tsIn.getTimeSeriesIdentifier());
                 final CTimeSeries result2 = tsDao.makeTimeSeries(tsIn.getTimeSeriesIdentifier());
                 tsDao.fillTimeSeries(result2,
-                                     tsIn.sampleAt(0).getTime(), 
+                                     tsIn.sampleAt(0).getTime(),
                                      tsIn.sampleAt(tsIn.size()-1).getTime(),
                                       true, true, false);
                 assertTrue(result2.size() == 0, "Time series elements were left in the database.");
             }
+        }
+    }
+
+    @Test
+    @EnableIfTsDb(impl = "OpenDCS-Postgres")
+    public void test_timeseries_modify() throws Exception
+    {
+        final String updatedDescription = "The updated description.";
+        try (TimeSeriesDAI tsDao = tsDb.makeTimeSeriesDAO())
+        {
+            CwmsTsId tsId = (CwmsTsId)tsDb.makeTsId("TESTSITE1.Stage.Inst.1Hour.0.test");
+            DbKey tsIdKey = tsDao.createTimeSeries(tsId);
+            tsId.setKey(tsIdKey);
+            assertNull(tsId.getDescription());
+            tsId.setDescription(updatedDescription);
+            tsId.setOffsetErrorAction(OffsetErrorAction.ROUND);
+            tsDao.modifyTSID(tsId);
+            final CwmsTsId tsIdStored = (CwmsTsId)tsDao.getTimeSeriesIdentifier(tsIdKey);
+            assertEquals(updatedDescription, tsIdStored.getDescription(), "Description was not updated.");
+            assertEquals(OffsetErrorAction.ROUND, tsIdStored.getOffsetErrorAction(), "Offset action was not updated");
         }
     }
 }
