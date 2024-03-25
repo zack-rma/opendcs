@@ -1,6 +1,7 @@
 package org.opendcs.fixtures.lrgs;
 
 import static org.opendcs.fixtures.helpers.BackgroundTsDbApp.waitForResult;
+import static org.opendcs.fixtures.assertions.Waiting.assertResultWithinTimeFrame;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -53,18 +54,22 @@ public class LrgsTestInstance
 
         lrgsThread = new Thread(lrgs);
         exit.execute(() -> lrgsThread.start());
-        waitForResult(value ->
-        {
-            try
+        
+        assertResultWithinTimeFrame(
+            (result) -> result == true,
+            value ->
             {
-                return lrgs.getStatusProvider().getStatusSnapshot().isUsable;
-            }
-            catch (NullPointerException ex)
-            {
-                // Future work should remove the need for this NPE catch.
-                return false;
-            }
-        }, 1, TimeUnit.MINUTES, 5, TimeUnit.SECONDS);
+                try
+                {
+                    return lrgs.getStatusProvider().getStatusSnapshot().isUsable;
+                }
+                catch (NullPointerException ex)
+                {
+                    // Future work should remove the need for this NPE catch.
+                    return false;
+                }
+            },
+            1, TimeUnit.MINUTES, 5, TimeUnit.SECONDS);
 
         this.archive = lrgs.msgArchive;
     }

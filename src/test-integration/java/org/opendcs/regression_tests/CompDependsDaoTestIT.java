@@ -1,8 +1,10 @@
 package org.opendcs.regression_tests;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.opendcs.fixtures.assertions.Waiting.assertResultWithinTimeFrame;
 
 import java.io.File;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -79,16 +81,15 @@ public class CompDependsDaoTestIT extends AppTestBase
                                             environment);)
             {
                 assertTrue(app.isRunning(), "App did not start correctly.");
-                assertTrue(
-                    BackgroundTsDbApp.waitForResult(
-                        timeMs -> !cd.getResults("select * from cp_comp_depends where computation_id=?",
-                                                 rs -> rs.getLong(1),
-                                                 compInDb.getKey()
-                                                )
-                                     .isEmpty(),
-                        2, TimeUnit.MINUTES,
-                        5, TimeUnit.SECONDS)
-                );
+                assertResultWithinTimeFrame(
+                    (result) -> result == true,   
+                    timeMs -> !cd.getResults("select * from cp_comp_depends where computation_id=?",
+                                            rs -> rs.getLong(1),
+                                            compInDb.getKey()
+                                            )
+                                  .isEmpty(),
+                    2, TimeUnit.MINUTES,
+                    5, TimeUnit.SECONDS);
             }
         }
     }
