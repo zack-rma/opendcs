@@ -50,10 +50,12 @@ package opendcs.dao;
 import ilex.util.PropertiesUtil;
 import ilex.util.TextUtil;
 
+import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -62,8 +64,16 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
+
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.argument.AbstractArgumentFactory;
+import org.jdbi.v3.core.argument.Argument;
+import org.jdbi.v3.core.argument.ArgumentFactory;
+import org.jdbi.v3.core.config.ConfigRegistry;
+import org.jdbi.v3.core.locator.ClasspathSqlLocator;
 
 import opendcs.dai.LoadingAppDAI;
 import opendcs.dai.PropertiesDAI;
@@ -336,6 +346,24 @@ public class LoadingAppDao
         try (Connection conn = getConnection();
              PropertiesDAI propsDao = db.makePropertiesDAO();)
         {
+            Jdbi jdbi = Jdbi.create(conn);
+            jdbi.registerArgument(new AbstractArgumentFactory<DbKey>(Types.BIGINT)
+            {
+                
+                @Override
+                protected Argument build(DbKey value, ConfigRegistry config)
+                {
+                    if (!DbKey.isNull(value))
+                    {
+                        return (position, statement, ctx) -> statement.setLong(position, value.getValue());
+                    }
+                    else
+                    {
+                        return (position, statement, ctx) -> statement.setNull(position, position);
+                    }
+                }
+                
+            });
             propsDao.setManualConnection(conn);
             if (isNew)
             {
@@ -364,6 +392,7 @@ public class LoadingAppDao
             else // update
             {
                 StringBuilder updateQuery = new StringBuilder("UPDATE HDB_LOADING_APPLICATION SET ");
+                
                 final Map<String,Object> fields = new LinkedHashMap<>();
 
                 if (!TextUtil.strEqual(app.getAppName(), oldcai.getAppName()))
@@ -381,6 +410,16 @@ public class LoadingAppDao
 
                 if (!fields.isEmpty())
                 {
+                    fields.put("LOADING_APPLICATION_ID", id);
+                    jdbi.useHandle(h ->
+                    {
+                        h.createUpdate(ClasspathSqlLocator.create().locate(LoadingAppDao.class, "update"))
+                         .bindMap(fields)
+                         .defineNamedBindings()
+                         .execute()
+                        ;
+                    });
+                    /*
                     Iterator<String> columnSet = fields.keySet().iterator();
                     while(columnSet.hasNext())
                     {
@@ -400,6 +439,7 @@ public class LoadingAppDao
                               .collect(Collectors.toList());
                     parameters.add(id);
                     doModify(updateQuery.toString(),parameters.toArray(new Object[0]));
+                    */
                 }
             }
 
