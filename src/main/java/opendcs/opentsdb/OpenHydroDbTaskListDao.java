@@ -24,10 +24,9 @@ public class OpenHydroDbTaskListDao extends TaskListDao
 {
     private static final Logger log = LoggerFactory.getLogger(getCallingClass());
     final String getTaskListStmtQuery = 
-            "select a.RECORD_NUM, a.TS_ID, a.num_value, a.txt_value a.sample_time, a.LOADING_APPLICATION_ID "
+            "select a.RECORD_NUM, a.TS_ID, a.num_value, a.txt_value, a.sample_time, a.LOADING_APPLICATION_ID, "
             + "a.DELETE_FLAG, a.flags, a.date_time_loaded, a.fail_time "
             + "from CP_COMP_TASKLIST a "
-            + ""
             + "where a.LOADING_APPLICATION_ID = ?";
     
 
@@ -60,7 +59,11 @@ public class OpenHydroDbTaskListDao extends TaskListDao
         }
         catch (SQLException ex)
         {
-            throw new DbIoException("Unable to retrieve task list entries.", ex);
+            if (log.isTraceEnabled())
+            {
+                log.trace("failed query was '{}'", withSortAndLimit);
+            }
+            throw new DbIoException("Unable to retrieve task list entries. with query ", ex);
         }
     }
 
@@ -73,7 +76,7 @@ public class OpenHydroDbTaskListDao extends TaskListDao
         Date sampleTime = new Date(rs.getLong("sample_time"));
         Date dateTimeLoad = new Date(rs.getLong("date_time_loaded"));
         Date failTime = null;
-        DbKey loadingApp = DbKey.createDbKey(rs, "loading_applicaton_id");
+        DbKey loadingApp = DbKey.createDbKey(rs, "loading_application_id");
         long ft = rs.getLong("fail_time");
         if(!rs.wasNull())
         {
