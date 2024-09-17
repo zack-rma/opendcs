@@ -9,5 +9,5 @@ version=$2
 
 for image in ${images[@]}; do
     echo "Building $tag/$image:$version"
-    docker build --target $image -t $tag/$image:$version .
+    docker buildx build --load --platform linux/amd64,linux/arm64  --target $image -t $tag/$image:$version .
 done;
