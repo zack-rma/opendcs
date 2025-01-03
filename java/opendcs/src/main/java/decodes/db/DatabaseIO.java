@@ -160,6 +160,15 @@ public abstract class DatabaseIO
 		throws DatabaseException;
 
 	/**
+	 Reads the set of known data-type objects in this database. Filters by standard.
+	 Objects in this collection are complete.
+	 @param dts the list to populate
+	 @param standard the data type standard to filter by
+	 */
+	public abstract void readDataTypeSet(DataTypeSet dts, String standard)
+		throws DatabaseException;
+
+	/**
 	  Reads a single data-type object given its numeric key.
 	  @return data type or null if not found
 	*/
@@ -189,6 +198,14 @@ public abstract class DatabaseIO
 	  @param eul the list to write
 	*/
 	public abstract void writeEngineeringUnitList(EngineeringUnitList eul)
+		throws DatabaseException;
+
+	/**
+	 * Deletes an EngineeringUnit from the database by its abbreviation.
+	 * @param eu object with the abbreviation set.
+	 * @throws DatabaseException if a database error occurs.
+	 */
+	public abstract void deleteEngineeringUnit(EngineeringUnit eu)
 		throws DatabaseException;
 
 	/**
@@ -292,6 +309,19 @@ public abstract class DatabaseIO
 	public abstract void readUnitConverterSet(UnitConverterSet ucs)
 		throws DatabaseException;
 
+	/**
+	 Stores the provided UnitConverterDb object into the database.
+	 @param uc the converter to store
+	 */
+	public abstract void insertUnitConverter(UnitConverterDb uc)
+			throws DatabaseException;
+
+	/**
+	 Deletes the specified UnitConverter from the database if it exists.
+	 @param ucId the database key of the UnitConverter to delete
+	 */
+	public abstract void deleteUnitConverter(Long ucId)
+			throws DatabaseException;
 
 	//=============== Object-level Read/Write Functions ============
 
