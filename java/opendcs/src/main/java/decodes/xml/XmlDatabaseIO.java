@@ -196,7 +196,7 @@ public class XmlDatabaseIO extends DatabaseIO
 				{
 					if (!xmlTop.mkdirs())
 					{
-						throw new DatabaseException(" Top directory '" + xmldir
+						throw new DatabaseException(" Top directory '" + xmldir 
 							+ "' does not exist and cannot be created. Check permissions and location.");
 					}
 				}
@@ -205,7 +205,7 @@ public class XmlDatabaseIO extends DatabaseIO
 					File entdir = new File(xmlTop, subdir);
 					if (!entdir.isDirectory() && !entdir.mkdir())
 					{
-						throw new DatabaseException("Entity directory '" + entdir.getPath()
+						throw new DatabaseException("Entity directory '" + entdir.getPath() 
 							+ "' does not exist and cannot be created. Check permissions and location.");
 					}
 				}
