@@ -94,7 +94,7 @@ public class RoutingSpecListIO extends SqlDbObjIo
     * For each RoutingSpec, this also reads the associated records in the
     * RoutingSpecNetworkList table and the RoutingSpecProperty table.
     */
-    public RoutingSpecList read(RoutingSpecList rsList)
+    public void read(RoutingSpecList rsList)
         throws SQLException, DatabaseException
     {
         log.debug("Reading RoutingSpecs...");
