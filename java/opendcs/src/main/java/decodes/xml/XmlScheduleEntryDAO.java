@@ -263,7 +263,7 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 	{
 		throw new UnsupportedOperationException("XML Database does not support readScheduleStatusById.");
 	}
-	
+
 	/**
 	 * Reads the next ScheduleEntryStatus from the file, starting at the current
 	 * position.
