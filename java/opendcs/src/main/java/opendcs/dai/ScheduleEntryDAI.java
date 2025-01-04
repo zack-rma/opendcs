@@ -51,7 +51,8 @@ public interface ScheduleEntryDAI
 	 * @return ScheduleEntry or null if no match found.
 	 * @throws DbIoException on database error
 	 */
-	public ScheduleEntry readScheduleEntry(DbKey id) throws DbIoException;
+	public ScheduleEntry readScheduleEntry(DbKey id)
+			throws DbIoException;
 
 	/**
 	 * Write the schedule entry to the database.
