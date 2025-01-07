@@ -14,6 +14,7 @@ import java.util.function.Predicate;
 
 import decodes.sql.DbKey;
 import decodes.tsdb.CompFilter;
+import decodes.tsdb.CompRefFilter;
 import decodes.tsdb.ConstraintException;
 import decodes.tsdb.DbComputation;
 import decodes.tsdb.DbIoException;
@@ -66,7 +67,7 @@ public interface ComputationDAI
 	 */
 	List<DbComputation> listComps(Predicate<DbComputation> filter)
 			throws DbIoException;
-	
+
 	/**
 	 * Writes a computation to the database.
 	 * Note: Does not write the subordinate algorithm record.
