@@ -67,7 +67,7 @@ public interface ComputationDAI
 	 */
 	List<DbComputation> listComps(Predicate<DbComputation> filter)
 			throws DbIoException;
-
+	
 	/**
 	 * Writes a computation to the database.
 	 * Note: Does not write the subordinate algorithm record.

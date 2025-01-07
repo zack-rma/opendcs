@@ -206,18 +206,18 @@ public class ComputationDAO
 			// Associate comps with groups, apps & algorithms.
 			for(CacheIterator it = compCache.iterator(); it.hasNext(); )
 			{
-				DbComputation comp = (DbComputation) it.next();
-				if(!DbKey.isNull(comp.getGroupId()))
+				DbComputation comp = (DbComputation)it.next();
+				if (!DbKey.isNull(comp.getGroupId()))
 					comp.setGroup(tsGroupDAO.getTsGroupById(comp.getGroupId()));
 
-				if(!DbKey.isNull(comp.getAppId()))
+				if (!DbKey.isNull(comp.getAppId()))
 					for(CompAppInfo cai : apps)
-						if(comp.getAppId().equals(cai.getAppId()))
+						if (comp.getAppId().equals(cai.getAppId()))
 							comp.setApplicationName(cai.getAppName());
 
-				if(!DbKey.isNull(comp.getAlgorithmId()))
+				if (!DbKey.isNull(comp.getAlgorithmId()))
 					for(DbCompAlgorithm algo : algos)
-						if(comp.getAlgorithmId().equals(algo.getId()))
+						if (comp.getAlgorithmId().equals(algo.getId()))
 						{
 							comp.setAlgorithm(algo);
 							comp.setAlgorithmName(algo.getName());
@@ -226,13 +226,13 @@ public class ComputationDAO
 
 			// Note the parms rely on the algorithms being in place. So get them now.
 			q = "select a.* from CP_COMP_TS_PARM a, CP_COMPUTATION b "
-					+ "where a.COMPUTATION_ID = b.COMPUTATION_ID";
+				+ "where a.COMPUTATION_ID = b.COMPUTATION_ID";
 			n[0] = 0;
 			doQuery(q, rs ->
 			{
 				DbKey compId = DbKey.createDbKey(rs, 1);
 				DbComputation comp = compCache.getByKey(compId);
-				if(comp == null)
+				if (comp == null)
 				{
 					log.warn("CP_COMP_TS_PARM with comp id={} with no matching computation.", compId);
 				}
@@ -250,7 +250,9 @@ public class ComputationDAO
 
 				// Make sure site IDs and datatype IDs are set in the parms
 				for(DbCompParm parm : comp.getParmList())
+				{
 					if(!parm.getSiteDataTypeId().isNull())
+					{
 						try
 						{
 							db.expandSDI(parm);
@@ -258,14 +260,16 @@ public class ComputationDAO
 						catch(NoSuchObjectException e)
 						{
 						}
+					}
+				}
 			}
 			log.debug("fillCache finished, {} computations cached.", compCache.size());
 		}
 		catch(Exception ex)
 		{
 			log.atWarn()
-					.setCause(ex)
-					.log("Exception filling computation hash.");
+			   .setCause(ex)
+			   .log("Exception filling computation hash.");
 		}
 
 		lastCacheFill = System.currentTimeMillis();
