@@ -765,6 +765,49 @@ public class XmlDatabaseIO extends DatabaseIO
 		}
 		catch(java.io.IOException e) { }
 	}
+
+	/**
+	 * Returns the list of NetworkList objects defined in this database.
+	 * Objects in this list may be only partially populated (key values
+	 * and primary display attributes only).
+	 * @param nll object in which to store data
+	 * @param tmType the transport medium type to filter on.
+	 */
+	public void readNetworkListList( NetworkListList nll, String tmType)
+			throws DatabaseException
+	{
+		try
+		{
+			String ls[] = listDirectory(NetworkListDir);
+			if (ls == null)
+				return;
+			for(int i=0; i<ls.length; i++)
+			{
+				InputStream is = null;
+				try
+				{
+					is = getInputStream(NetworkListDir, ls[i]);
+					NetworkList ob = (NetworkList)myParser.parse(is);
+					if (ob.transportMediumType.equalsIgnoreCase(tmType))
+					{
+						nll.add(ob);
+					}
+				}
+				// Catch other type (IO or bad cast) exceptions
+				catch(Exception e)
+				{
+					Logger.instance().log(Logger.E_FAILURE,
+							"Error parsing network list '" + ls[i] + "' " + e);
+				}
+				finally
+				{
+					if (is != null)
+						try { is.close(); } catch(Exception e) {}
+				}
+			}
+		}
+		catch(java.io.IOException e) { }
+	}
 	
 	/**
 	 * Non-cached, stand-alone method to read the list of network list 
