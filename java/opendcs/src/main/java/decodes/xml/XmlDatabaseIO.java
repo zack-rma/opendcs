@@ -781,7 +781,19 @@ public class XmlDatabaseIO extends DatabaseIO
 		}
 		catch(java.io.IOException e) { }
 	}
-	
+
+	/**
+	 * Returns the list of NetworkList objects defined in this database.
+	 * Objects in this list may be only partially populated (key values
+	 * and primary display attributes only).
+	 * @param nll object in which to store data
+	 * @param tmType the transport medium type to filter on.
+	 */
+	public void readNetworkListList( NetworkListList nll, String tmType)
+	{
+		throw new UnsupportedOperationException("XmlDatabaseIO.readNetworkListList with filter not implemented for XML.");
+	}
+
 	/**
 	 * Non-cached, stand-alone method to read the list of network list 
 	 * specs currently defined in the database.
