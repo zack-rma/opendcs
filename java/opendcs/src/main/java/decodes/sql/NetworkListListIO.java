@@ -306,7 +306,7 @@ public class NetworkListListIO extends SqlDbObjIo
 	{
 		read(nll, null);
 	}
-	
+
 	/**
 	 * Non-cached, stand-alone method to read the list of network list 
 	 * specs currently defined in the database.
