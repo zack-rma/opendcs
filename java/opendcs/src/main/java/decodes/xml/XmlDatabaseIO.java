@@ -33,6 +33,7 @@
 */
 package decodes.xml;
 
+import decodes.db.DataType;
 import decodes.db.EngineeringUnit;
 import decodes.db.UnitConverterDb;
 import ilex.util.Counter;
@@ -1075,6 +1076,26 @@ e.printStackTrace();
 		}
 	}
 
+	/**
+	 * If the presentation group referenced by groupId is used by one or more routing
+	 * specs, return a list of routing spec IDs and names. If groupId is not used,
+	 * return null.
+	 * @param groupId the group ID to check
+	 * @return list of routing spec IDs and names, or null if not used.
+	 * @throws DatabaseException upon error
+	 */
+	public synchronized String routeSpecsUsing(long groupId)
+			throws DatabaseException
+	{
+		throw new UnsupportedOperationException("routeSpecsUsing not implemented for XML.");
+	}
+
+	@Override
+	public DataType lookupDataType(String dtCode)
+			throws DatabaseException
+	{
+		throw new UnsupportedOperationException("lookupDataType not implemented for XML.");
+	}
 
 	/**
 	 * Returns the list of Site objects defined in this database.
