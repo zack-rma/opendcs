@@ -304,8 +304,7 @@ public class XmlDatabaseIO extends DatabaseIO
 	 */
 	protected long getLastModifyTime( String dir, String name ) throws IOException
 	{
-		String fileName = makePath(dir, name);
-		File file = new File(fileName);
+		File file = new File(makePath(dir, name));
 		return file.lastModified();
 	}
 
@@ -1391,7 +1390,7 @@ e.printStackTrace();
 	 * </p>
 	 * @param p object in which to store data
 	 */
-	public Platform readPlatform( Platform p ) throws DatabaseException
+	public void readPlatform( Platform p ) throws DatabaseException
 	{
 		String fn = makePath(PlatformDir,
 			"p" + platIdFormat.format(p.getId().getValue()));
@@ -1414,7 +1413,7 @@ e.printStackTrace();
 			Logger.instance().debug1("XML readPlatform, fileLMT="
 				+ myParser.getFileLMT() + ", platformLMT=" + p.lastModifyTime);
 
-			return p;
+			return;
 		}
 		throw new DatabaseException(
 			"Cannot read platform from file '" + fn + "'");
@@ -1431,7 +1430,7 @@ e.printStackTrace();
 	 * @param pl object in which to store data
 	 * @param tmType the transport medium type to filter on
 	 */
-	public synchronized PlatformList readPlatformList(PlatformList pl, String tmType)
+	public synchronized void readPlatformList(PlatformList pl, String tmType)
 	{
 		throw new UnsupportedOperationException("XmlDatabaseIO.readPlatformList(tmType)");
 	}

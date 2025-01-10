@@ -54,7 +54,7 @@ public abstract class DatabaseIO
 	}
 
 	/**
-
+	 
 	 * @param settings
 	 * @return
 	 * @throws DatabaseException
@@ -67,7 +67,7 @@ public abstract class DatabaseIO
 	}
 
 	/**
-	 *
+	 * 
 	 * @param settings
 	 * @param locOverride
 	 * @return
@@ -101,7 +101,7 @@ public abstract class DatabaseIO
 		{
 			throw new DatabaseException("Unable to authenticate against the database.", ex);
 		}
-
+		
 	}
 
 	//========== Identification methods ==========================
@@ -274,7 +274,7 @@ public abstract class DatabaseIO
 	 @param pl the list to populate
 	 @param tmType the transport medium type to filter on
 	 */
-	public abstract PlatformList readPlatformList(PlatformList pl, String tmType)
+	public abstract void readPlatformList(PlatformList pl, String tmType)
 			throws DatabaseException;
 
 
@@ -383,7 +383,7 @@ public abstract class DatabaseIO
 	* </p>
 	  @param p the platform to read
 	*/
-	public abstract Platform readPlatform( Platform p )
+	public abstract void readPlatform( Platform p )
 		throws DatabaseException;
 
 	/**
@@ -518,7 +518,7 @@ public abstract class DatabaseIO
 	 * Returns the most recent data that the platform list was modified, this
 	 * will be the time of the most-recent platform mod.
 	 * @return the most recent data that the platform list was modified.
-	 * @throws DatabaseException
+	 * @throws DatabaseException 
 	 */
 	public abstract Date getPlatformListLMT();
 

@@ -1,13 +1,15 @@
 package decodes.xml;
 
+import decodes.db.NetworkList;
+import decodes.db.NetworkListEntry;
 import ilex.util.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.xml.sax.SAXException;
 
 import decodes.db.DatabaseObject;
@@ -58,9 +60,9 @@ public class XmlPlatformStatusDAO
 	@Override
 	public List<PlatformStatus> readPlatformStatusList(DbKey netlistId)
 	{
-		throw new NotImplementedException("XmlPlatformStatusDAO.readPlatformStatusList");
+		throw new UnsupportedOperationException("XmlPlatformStatusDAO.readPlatformStatusList");
 	}
-	
+
 	private String makeFileName(DbKey platformId)
 	{
 		return "ps-" + platformId + ".xml";

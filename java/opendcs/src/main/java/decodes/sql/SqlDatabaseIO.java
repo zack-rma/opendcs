@@ -267,7 +267,7 @@ public class SqlDatabaseIO
         commitAfterSelect = false;
         try (Connection conn = dataSource.getConnection())
         {
-            determineVersion(conn);
+            determineVersion(conn);        
             setDBDatetimeFormat(conn);
         }
         catch (SQLException ex)
@@ -581,7 +581,7 @@ public class SqlDatabaseIO
     @Override
     public synchronized void readEngineeringUnitList(EngineeringUnitList euList) throws DatabaseException
     {
-
+        
 
         try (Connection conn = getConnection())
         {
@@ -656,13 +656,13 @@ public class SqlDatabaseIO
      *  @param tmType the transport medium type to filter on.
      */
     @Override
-    public synchronized PlatformList readPlatformList(PlatformList pl, String tmType)
+    public synchronized void readPlatformList(PlatformList pl, String tmType)
             throws DatabaseException
     {
         try (Connection conn = getConnection())
         {
             _platformListIO.setConnection(conn);
-            return _platformListIO.read(pl, tmType);
+            _platformListIO.read(pl, tmType);
         }
         catch (SQLException ex)
         {
@@ -1183,13 +1183,13 @@ public class SqlDatabaseIO
       @param p the object to populate from the database.
     */
     @Override
-    public synchronized Platform readPlatform(Platform p)
+    public synchronized void readPlatform(Platform p)
         throws DatabaseException
     {
         try (Connection conn = getConnection())
         {
             _platformListIO.setConnection(conn);
-            return _platformListIO.readPlatform(p);
+            _platformListIO.readPlatform(p);
         }
         catch (SQLException ex)
         {
@@ -1666,7 +1666,7 @@ public class SqlDatabaseIO
         throws DatabaseException
     {
         try (Connection conn = getConnection())
-        {
+        {            
             _routingSpecListIO.setConnection(conn);
             _routingSpecListIO.readRoutingSpec(rs);
         }
@@ -1754,7 +1754,7 @@ public class SqlDatabaseIO
     @Override
     public synchronized void readDataSource(DataSource ds) throws DatabaseException
     {
-
+        
         try (Connection conn = getConnection())
         {
             _dataSourceListIO.setConnection(conn);
