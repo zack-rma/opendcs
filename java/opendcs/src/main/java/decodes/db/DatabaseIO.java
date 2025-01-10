@@ -6,8 +6,6 @@ package decodes.db;
 import java.sql.SQLException;
 import java.util.*;
 
-import javax.xml.parsers.ParserConfigurationException;
-
 import opendcs.dai.LoadingAppDAI;
 import opendcs.dai.PlatformStatusDAI;
 import opendcs.dai.ScheduleEntryDAI;
@@ -15,10 +13,8 @@ import opendcs.dai.ScheduleEntryDAI;
 import org.opendcs.authentication.AuthSourceService;
 import org.opendcs.database.SimpleDataSource;
 import org.opendcs.spi.authentication.AuthSource;
-import org.xml.sax.SAXException;
 
 import ilex.util.AuthException;
-import ilex.util.Counter;
 import decodes.sql.DbKey;
 import decodes.sql.DecodesDatabaseVersion;
 import decodes.sql.SqlDatabaseIO;
@@ -173,6 +169,14 @@ public abstract class DatabaseIO
 	{
 		return null;
 	}
+
+	/**
+	 Performs a lookup for a matching data-type object based on the data type code.
+	 @param dtCode the data type code to look up
+	 @return the data type object or null if not found
+	 */
+	public abstract DataType lookupDataType(String dtCode)
+			throws DatabaseException;
 
 	/**
 	  Writes the data type set to the database.
@@ -429,6 +433,17 @@ public abstract class DatabaseIO
 	*/
 	public abstract Date getPresentationGroupLMT(PresentationGroup pg)
 		throws DatabaseException;
+
+	/**
+	 * If the presentation group referenced by groupId is used by one or more routing
+	 * specs, return a list of routing spec IDs and names. If groupId is not used,
+	 * return null.
+	 * @param groupId
+	 * @return string concatenated list of routing spec IDs and names, or null if not used.
+	 * @throws SQLException
+	 */
+	public abstract String routeSpecsUsing(long groupId)
+			throws DatabaseException;
 
 	/**
 	  Reads a routing spec completely into memory.

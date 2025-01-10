@@ -69,7 +69,6 @@ import decodes.db.*;
 import decodes.hdb.HdbSqlDatabaseIO;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -78,11 +77,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Properties;
 import java.util.TimeZone;
-
-import ilex.util.EnvExpander;
-import org.opendcs.authentication.AuthSourceService;
 
 import org.slf4j.LoggerFactory;
 
@@ -119,8 +114,6 @@ import opendcs.dao.ScheduleEntryDAO;
 import opendcs.dao.SiteDAO;
 import opendcs.dao.TsGroupDAO;
 import opendcs.dao.XmitRecordDAO;
-import opendcs.util.sql.WrappedConnection;
-import ilex.util.AuthException;
 import ilex.util.Logger;
 import decodes.tsdb.BadTimeSeriesException;
 import decodes.tsdb.CTimeSeries;
@@ -516,6 +509,26 @@ public class SqlDatabaseIO
             dtdao.readDataTypeSet(dts);
         }
         catch(DbIoException ex)
+        {
+            throw new DatabaseException("Failed to read site datatype set", ex);
+        }
+    }
+
+    /**
+     Performs a lookup for a matching data-type object based on the data type code.
+     @param dtCode the data type code to look up
+     @return the data type object or null if not found
+     */
+    @Override
+    public synchronized DataType lookupDataType(String dtCode)
+            throws DatabaseException
+    {
+
+        try (DataTypeDAI dtdao = this.makeDataTypeDAO())
+        {
+            return dtdao.lookupDataType(dtCode);
+        }
+        catch(DbIoException | NoSuchObjectException ex)
         {
             throw new DatabaseException("Failed to read site datatype set", ex);
         }
@@ -1448,6 +1461,33 @@ public class SqlDatabaseIO
         catch (SQLException ex)
         {
             throw new DatabaseException("Unable to get Presentation group last modified time.", ex);
+        }
+        finally
+        {
+            _presentationGroupListIO.setConnection(null);
+        }
+    }
+
+    /**
+     * If the presentation group referenced by groupId is used by one or more routing
+     * specs, return a list of routing spec IDs and names. If groupId is not used,
+     * return null.
+     * @param groupId the ID of the presentation group to check.
+     * @return string concatenated list of routing spec IDs and names, or null if not used.
+     * @throws DatabaseException if a database error occurs.
+     */
+    @Override
+    public synchronized String routeSpecsUsing(long groupId)
+            throws DatabaseException
+    {
+        try (Connection conn = getConnection())
+        {
+            _presentationGroupListIO.setConnection(conn);
+            return _presentationGroupListIO.routeSpecsUsing(groupId);
+        }
+        catch (SQLException ex)
+        {
+            throw new DatabaseException("deletePresentationGroup.", ex);
         }
         finally
         {

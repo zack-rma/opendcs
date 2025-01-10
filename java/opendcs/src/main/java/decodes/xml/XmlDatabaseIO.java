@@ -33,6 +33,7 @@
 */
 package decodes.xml;
 
+import decodes.db.DataType;
 import ilex.util.Counter;
 import ilex.util.FileCounter;
 import ilex.util.Logger;
@@ -585,6 +586,59 @@ public class XmlDatabaseIO extends DatabaseIO
 		}
 	}
 
+
+	/**
+	 * Performs a lookup for a matching data-type object based on the data type code.
+	 * @param dtCode the data type code to look up
+	 * @return the data type object or null if not found
+	 * @throws DatabaseException if an error occurs
+	 */
+	public DataType lookupDataType( String dtCode) throws DatabaseException
+	{
+		Database oldDb = Database.getDb();
+		DataTypeSet dts = new DataTypeSet();
+		// Make sure correct database is in effect.
+		Database.setDb(dts.getDatabase());
+		InputStream is = null;
+		try
+		{
+			long lmt = getLastModifyTime(DataTypeDir, DataTypeEquivFile);
+			if (dts.getTimeLastRead() < lmt)
+			{
+				is = getInputStream(DataTypeDir, DataTypeEquivFile);
+				myParser.parse(is, dts);
+				dts.setTimeLastRead();
+				for (DataType dt : dts.values())
+				{
+					if(dt.getCode().equalsIgnoreCase(dtCode))
+					{
+						return dt;
+					}
+				}
+			}
+			return null;
+		}
+		catch(Exception e)
+		{
+			throw new DatabaseException(e.toString());
+		}
+		finally
+		{
+			if (is != null)
+			{
+				try
+				{
+					is.close();
+				}
+				catch(Exception ignored)
+				{
+					//ignored
+				}
+			}
+			Database.setDb(oldDb);
+		}
+	}
+
 	/**
 	 * Writes the DataTypeSet to the database.
 	 * @param dts set to write
@@ -1049,6 +1103,41 @@ e.printStackTrace();
 		{
 			throw new DatabaseException(e.toString());
 		}
+	}
+
+	/**
+	 * If the presentation group referenced by groupId is used by one or more routing
+	 * specs, return a list of routing spec IDs and names. If groupId is not used,
+	 * return null.
+	 * @param groupId
+	 * @return
+	 * @throws SQLException
+	 */
+	public synchronized String routeSpecsUsing(long groupId)
+			throws DatabaseException
+	{
+		RoutingSpecList rsl = new RoutingSpecList();
+		readRoutingSpecList(rsl);
+
+		PresentationGroupList pgl = new PresentationGroupList();
+		readPresentationGroupList(pgl);
+		PresentationGroup pg = pgl.getById(DbKey.createDbKey(groupId));
+
+		StringBuilder ret = new StringBuilder();
+		for(RoutingSpec rs : rsl.getList())
+		{
+			if (rs.presentationGroupName != null && !rs.presentationGroupName.isEmpty()
+					&& rs.presentationGroupName.equalsIgnoreCase(pg.groupName))
+			{
+				if (ret.length() > 0)
+				{
+					ret.append(", ");
+				}
+				ret.append(String.format("%d:%s", rs.getId().getValue(), rs.getName()));
+			}
+		}
+		return ret.length() == 0 ? null : ret.toString();
+
 	}
 
 
