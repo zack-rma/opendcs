@@ -28,10 +28,10 @@ public interface EnumDAI extends DaiBase, OpenDcsDao
 
 	@Deprecated
 	public void readEnumList(EnumList top) throws DbIoException;
-	
+
 	@Deprecated
 	public void writeEnumList(EnumList enumList) throws DbIoException;
-	
+
 	@Deprecated
 	public void writeEnum(DbEnum dbenum) throws DbIoException;
 	
@@ -71,5 +71,5 @@ public interface EnumDAI extends DaiBase, OpenDcsDao
 	 * @return DbEnum with additional information filled in.
 	 * @throws OpenDcsDataException
 	 */
-	public DbEnum writeEnum(DataTransaction tx, DbEnum dbEnum) throws OpenDcsDataException;	
+	public DbEnum writeEnum(DataTransaction tx, DbEnum dbEnum) throws OpenDcsDataException;
 }
