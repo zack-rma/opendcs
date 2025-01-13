@@ -259,7 +259,7 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 					if (dbEnum != null)
 						rs2EnumValue(rs, dbEnum);
 					top.addEnum(dbEnum);
-				});				
+				});
 			}
 		}
 		catch (SQLException ex)
@@ -586,7 +586,7 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 			rs2EnumValue(rs, dbenum);
 		},dbenum.getId());
 	}
-	
+
 	private void rs2EnumValue(ResultSet rs, DbEnum dbEnum)
 		throws SQLException
 	{

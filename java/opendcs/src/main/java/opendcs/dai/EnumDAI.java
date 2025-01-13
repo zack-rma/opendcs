@@ -53,7 +53,7 @@ public interface EnumDAI extends DaiBase, OpenDcsDao
 
 	DbEnum getEnumById(DbKey enumId)
 			throws DbIoException;
-	
+
 	void close();
 
 	/**
