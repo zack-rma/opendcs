@@ -69,7 +69,6 @@ import decodes.db.*;
 import decodes.hdb.HdbSqlDatabaseIO;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -78,11 +77,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Properties;
 import java.util.TimeZone;
-
-import ilex.util.EnvExpander;
-import org.opendcs.authentication.AuthSourceService;
 
 import org.slf4j.LoggerFactory;
 
@@ -119,8 +114,6 @@ import opendcs.dao.ScheduleEntryDAO;
 import opendcs.dao.SiteDAO;
 import opendcs.dao.TsGroupDAO;
 import opendcs.dao.XmitRecordDAO;
-import opendcs.util.sql.WrappedConnection;
-import ilex.util.AuthException;
 import ilex.util.Logger;
 import decodes.tsdb.BadTimeSeriesException;
 import decodes.tsdb.CTimeSeries;
@@ -621,6 +614,32 @@ public class SqlDatabaseIO
         {
             log.error("Unable to read platform list", ex);
             throw new DatabaseException("Unable to read platform list", ex);
+        }
+        finally
+        {
+            _platformListIO.setConnection(null);
+        }
+    }
+
+    /**
+     * Find a transport ID by platform name.
+     * @param name the platform name to look up
+     * @return matching transport ID or null if no match found.
+     * @throws DatabaseException if an error occurs
+     */
+    @Override
+    public synchronized String platformNameToTransportId(String name)
+            throws DatabaseException
+    {
+        try (Connection conn = getConnection())
+        {
+            _platformListIO.setConnection(conn);
+            return _platformListIO.platformNameToTransportId(name);
+        }
+        catch (SQLException ex)
+        {
+            log.error("Unable to get transport id from platform name", ex);
+            throw new DatabaseException("Unable to get transport id from platform name", ex);
         }
         finally
         {
@@ -1620,6 +1639,25 @@ public class SqlDatabaseIO
         {
             _dataSourceListIO.setConnection(conn);
             _dataSourceListIO.delete(ds);
+        }
+        catch (SQLException ex)
+        {
+            throw new DatabaseException("deleteDataSource.", ex);
+        }
+        finally
+        {
+            _dataSourceListIO.setConnection(null);
+        }
+    }
+
+    @Override
+    public synchronized DbKey lookupDataSourceId(String name)
+            throws DatabaseException
+    {
+        try (Connection conn = getConnection())
+        {
+            _dataSourceListIO.setConnection(conn);
+            return _dataSourceListIO.name2id(name);
         }
         catch (SQLException ex)
         {

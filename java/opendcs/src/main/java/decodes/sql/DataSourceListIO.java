@@ -424,7 +424,7 @@ public class DataSourceListIO extends SqlDbObjIo
 	}
 
 
-	private DbKey name2id(String name)
+	public DbKey name2id(String name)
 		throws DatabaseException, SQLException
 	{
 		Statement stmt = createStatement();

@@ -21,7 +21,6 @@ import ilex.util.HasProperties;
 import ilex.util.Logger;
 
 import java.io.IOException;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -113,6 +112,36 @@ public class PropertiesSqlDao extends DaoBase implements PropertiesDAI
             String msg = "Error in query '" + q + "': " + ex;
             warning(msg);
             throw new DbIoException(msg);
+        }
+    }
+
+    @Override
+    public void readProperties(String tableName, Properties props) throws DbIoException
+    {
+        Objects.requireNonNull(props, "A valid properties object must be passed into this function.");
+        Objects.requireNonNull(tableName, "A valid table name is required.");
+        String q = "select * from " + tableName;
+
+        try
+        {
+            doQuery(q,rs -> {
+                String name = rs.getString(2);
+                String value = rs.getString(3);
+                if (value == null)
+                {
+                    value = "";
+                }
+                try {
+                    props.setProperty(name, Property.getRealPropertyValue(value,value));
+                } catch (IOException e) {
+                    Logger.instance().warning("Unable to retrieve property value for: " + name);
+                }
+            });
+        }
+        catch (SQLException ex)
+        {
+            String msg = "Error in query '" + q + "'. Unable to retrieve Properties";
+            throw new DbIoException(msg,ex);
         }
     }
 

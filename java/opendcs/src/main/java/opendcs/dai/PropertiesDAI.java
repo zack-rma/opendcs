@@ -41,6 +41,9 @@ public interface PropertiesDAI
 		DbKey parentKey, int key2, Properties props)
 		throws DbIoException;
 
+	void readProperties(String tableName, Properties props)
+		throws DbIoException;
+
 	/**
 	 * Delete properties from the database
 	 * @param tableName name of the properties table

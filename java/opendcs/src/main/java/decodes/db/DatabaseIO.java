@@ -3,10 +3,7 @@
 */
 package decodes.db;
 
-import java.sql.SQLException;
 import java.util.*;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import opendcs.dai.LoadingAppDAI;
 import opendcs.dai.PlatformStatusDAI;
@@ -15,10 +12,8 @@ import opendcs.dai.ScheduleEntryDAI;
 import org.opendcs.authentication.AuthSourceService;
 import org.opendcs.database.SimpleDataSource;
 import org.opendcs.spi.authentication.AuthSource;
-import org.xml.sax.SAXException;
 
 import ilex.util.AuthException;
-import ilex.util.Counter;
 import decodes.sql.DbKey;
 import decodes.sql.DecodesDatabaseVersion;
 import decodes.sql.SqlDatabaseIO;
@@ -489,6 +484,9 @@ public abstract class DatabaseIO
 	public abstract void deleteDataSource( DataSource ds )
 		throws DatabaseException;
 
+	public abstract DbKey lookupDataSourceId(String name)
+		throws DatabaseException;
+
 	/**
 	* Reads (or re-reads) a NetworkList from the database.  This uses
 	* the object's name member (not its ID) to uniquely identify the
@@ -556,6 +554,15 @@ public abstract class DatabaseIO
 	public abstract DbKey lookupCurrentPlatformId(SiteName sn, String designator,
 		boolean useDesignator)
 		throws DatabaseException;
+
+	/**
+	 * Find a transport ID by platform name.
+	 * @param name the platform name to look up
+	 * @return matching transport ID or null if no match found.
+	 * @throws DatabaseException if an error occurs
+	 */
+	public abstract String platformNameToTransportId(String name)
+			throws DatabaseException;
 
 	public abstract Site getSiteBySiteName(SiteName sn)
 		throws DatabaseException;

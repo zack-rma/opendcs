@@ -1138,6 +1138,65 @@ public class PlatformListIO extends SqlDbObjIo
         }
     }
 
+    public String platformNameToTransportId(String name)
+            throws DatabaseException
+    {
+        int hyphen = name.lastIndexOf('-');
+        String desig = null;
+        if (hyphen > 0 && name.length() > hyphen)
+        {
+            desig = name.substring(hyphen+1);
+            name = name.substring(0, hyphen);
+        }
+
+        DbKey siteId = null;
+        try (SiteDAI siteDAO = super.getDbio().makeSiteDAO())
+        {
+            siteId = siteDAO.lookupSiteID(name);
+        }
+        catch (DbIoException ex)
+        {
+            log.warn("Error looking up site ID for site name '" + name + "': " + ex);
+        }
+        if (siteId == DbKey.NullKey)
+        {
+            return null;
+        }
+
+        String q = "select tm.MEDIUMTYPE, tm.MEDIUMID "
+                + "from TRANSPORTMEDIUM tm, PLATFORM p "
+                + "where tm.PLATFORMID = p.id "
+                + "and p.SITEID = ?"
+                + " and p.PLATFORMDESIGNATOR ?";
+        String desigValue = desig != null ? ("= " + this.getSingleWord(desig)) : "is null";
+        Connection conn = null;
+        String ret = null;
+        try
+        {
+            ret = getDaoHelper().getSingleResult(q, r ->
+            {
+                String retVal = null;
+                while(r.next())
+                {
+                    String t = r.getString(1);
+                    String id = r.getString(2);
+                    if(retVal == null
+                            || t.toLowerCase().startsWith("goes"))
+                    {
+                        retVal = id;
+                    }
+                }
+                return retVal;
+            }, siteId, desigValue);
+        }
+        catch(SQLException ex)
+        {
+            String msg = String.format("%s: Error in query '%s': %s", this.getClass().getName(), q, ex);
+            throw new DatabaseException(msg, ex);
+        }
+        return ret;
+    }
+
     public DbKey lookupCurrentPlatformId(SiteName sn,
         String designator, boolean useDesignator)
         throws DatabaseException
@@ -1216,5 +1275,19 @@ public class PlatformListIO extends SqlDbObjIo
             log.warn("SQL Error reading LMT for platform list: ", ex);
             return new Date(0L);
         }
+    }
+
+    private String getSingleWord(String arg)
+    {
+        String special = "(){}[]'\"|,";
+
+        StringBuilder sb = new StringBuilder(arg.trim());
+        for(int idx = 0; idx < sb.length(); idx++)
+        {
+            char c = sb.charAt(idx);
+            if (Character.isWhitespace(c) || special.indexOf(c) >= 0)
+                return idx == 0 ? "" : sb.substring(0, idx);
+        }
+        return sb.toString();
     }
 }

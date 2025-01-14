@@ -822,6 +822,29 @@ public class XmlDatabaseIO extends DatabaseIO
 		}
 	}
 
+	/**
+	 * Find a transport ID by platform name.
+	 * @param name the platform name to look up
+	 * @return matching transport ID or null if no match found.
+	 * @throws DatabaseException if an error occurs
+	 */
+	@Override
+	public String platformNameToTransportId(String name)
+			throws DatabaseException
+	{
+		PlatformList platList = new PlatformList();
+		readPlatformList(platList);
+
+		for (Platform p : platList.getPlatformVector())
+		{
+			if (p.getDisplayName().equalsIgnoreCase(name))
+			{
+				return p.getPreferredTransportId();
+			}
+		}
+		return null;
+	}
+
 	public Date getPlatformListLMT()
 	{
 		try
@@ -1712,6 +1735,26 @@ e.printStackTrace();
 		String fn = xmldir + File.separator + DataSourceDir
 					+ File.separator + ob.makeFileName();
 		tryDelete(fn);
+	}
+
+	public DbKey lookupDataSourceId(String name)
+		throws DatabaseException
+	{
+		String fn = "";
+		try
+		{
+			DataSource ob = new DataSource();
+			ob.setName(name);
+			fn = makePath(DataSourceDir, ob.makeFileName());
+			Logger.instance().log(Logger.E_DEBUG1,
+					"XmlDatabaseIO: Reading DataSource '" + fn + "'");
+			myParser.parse(new File(fn), ob);
+			return ob.getId();
+		}
+		catch(Exception e)
+		{
+			throw new DatabaseException("Error reading '" + fn + "': " + e);
+		}
 	}
 
 	/**
