@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import decodes.db.ValueNotFoundException;
+import decodes.decoder.Season;
 import opendcs.dai.EnumDAI;
 
 import decodes.db.DbEnum;
@@ -242,14 +243,160 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 		}
 	}
 
+	@Override
+	public Season getSeason(String abbr)
+			throws DbIoException
+	{
+		if (abbr == null || abbr.isEmpty())
+		{
+			throw new DbIoException("Must provide a season abbreviation to retrieve a season");
+		}
+		try
+		{
+			Long seasonRefListId = getSeasonRefListId();
+			Season ret = new Season();
 
+			String abbrLower = abbr.toLowerCase();
+			String q = "select enumValue, description, editClass from EnumValue "
+				+ "where enumId = ? and lower(enumValue) = ?";
+
+			doQuery(q, rs ->
+			{
+				ret.setAbbr(rs.getString(1));
+				ret.setName(rs.getString(2));
+				String[] startEndTz = rs.getString(3).split(" ");
+				if(startEndTz.length >= 1)
+				{
+					ret.setStart(startEndTz[0]);
+				}
+				if(startEndTz.length >= 2)
+				{
+					ret.setEnd(startEndTz[1]);
+				}
+				if (startEndTz.length >= 3)
+				{
+					ret.setTz(startEndTz[2]);
+				}
+			}, seasonRefListId, abbrLower);
+
+			if (ret.getAbbr() == null || ret.getAbbr().isEmpty())
+			{
+				Throwable notFound = new ValueNotFoundException("No season with abbreviation '" + abbr + "'");
+				throw new DbIoException(String.format("No season with abbreviation '%s'", abbr), notFound);
+			}
+			return ret;
+		}
+		catch(SQLException ex)
+		{
+			throw new DbIoException(String.format("Failed to get season with abbreviation %s", abbr), ex);
+		}
+	}
+
+	@Override
+	public void deleteSeason(String abbr)
+		throws DbIoException
+	{
+		try
+		{
+			Long seasonRefListId = getSeasonRefListId();
+			String q = "DELETE FROM EnumValue WHERE enumId = ? and lower(enumValue) = ?";
+			doModify(q, seasonRefListId, abbr.toLowerCase());
+		}
+		catch(SQLException ex)
+		{
+			throw new DbIoException("Failed to delete season with abbreviation " + abbr, ex);
+		}
+	}
+
+	@Override
+	public void writeSeason(Season season, String fromAbbr, int sortNum)
+		throws DbIoException
+	{
+		try
+		{
+			DbKey seasonRefListId = getOrCreateSeasonRefListId();
+
+			Season existing = checkExistence(season.getAbbr());
+
+			Season fromExisting = null;
+			if (fromAbbr != null && !fromAbbr.isEmpty())
+			{
+				fromExisting = checkExistence(fromAbbr);
+			}
+
+			String startEndTz = String.format("%s %s", season.getStart(), season.getEnd());
+			if (season.getTz() != null)
+			{
+				startEndTz = startEndTz + " " + season.getTz();
+			}
+
+			String q;
+			if (fromExisting != null)
+			{
+				if (existing != null)
+				{
+					throw new DbIoException(
+							String.format("Cannot update season from %s to %s. The season '%s' already exists",
+									fromAbbr, season.getAbbr(), season.getAbbr()));
+				}
+				q = "update enumvalue set enumvalue = ?, description = ?, editclass = ?, sortnumber = ? "
+						+ "where enumid = ? and lower(enumvalue) = ?";
+				doModify(q, season.getAbbr(), season.getName(), startEndTz, fromAbbr.toLowerCase(), sortNum);
+			}
+			else if ((fromAbbr == null || fromAbbr.isEmpty()) && existing == null)
+			{
+				q = "insert into enumvalue(enumid, enumvalue, description, editclass, sortnumber) values(?,?,?,?,?)";
+				doModify(q, seasonRefListId, season.getAbbr(), season.getName(), startEndTz, sortNum);
+			}
+			else if (fromAbbr == null || fromAbbr.isEmpty())
+			{
+				q = "update enumvalue set enumvalue = ?, description = ?, editclass = ?, sortnumber = ? "
+						+ "where enumid = ? and lower(enumvalue) = ?";
+				doModify(q, season.getAbbr(), season.getName(), startEndTz,
+						sortNum, seasonRefListId, season.getAbbr().toLowerCase());
+			}
+			else
+			{
+				Throwable cause = new ValueNotFoundException(String.format("No such season with abbr '%s'.", fromAbbr));
+				throw new DbIoException(String.format("No such season with abbr '%s'.", fromAbbr), cause);
+			}
+		}
+		catch(SQLException ex)
+		{
+			throw new DbIoException("Failed to write season with abbreviation " + season.getAbbr(), ex);
+		}
+	}
+
+	private Season checkExistence(String abbr) throws DbIoException
+	{
+		try
+		{
+			return getSeason(abbr);
+		}
+		catch(DbIoException ex)
+		{
+			if (ex.getCause() instanceof ValueNotFoundException)
+			{
+				return null;
+			}
+			throw ex;
+		}
+	}
 
 	private DbKey getOrCreateSeasonRefListId()
 		throws DbIoException, SQLException
 	{
 		try
 		{
-			return DbKey.createDbKey(getSeasonRefListId());
+			Long id = getSeasonRefListId();
+			if (id != null)
+			{
+				return DbKey.createDbKey(id);
+			}
+			else
+			{
+				throw new DbIoException("Failed to get season ref list id");
+			}
 		}
 		catch(DbIoException ex)
 		{
