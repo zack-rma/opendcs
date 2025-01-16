@@ -69,7 +69,6 @@ import decodes.db.*;
 import decodes.hdb.HdbSqlDatabaseIO;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -78,11 +77,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Properties;
 import java.util.TimeZone;
 
-import ilex.util.EnvExpander;
-import org.opendcs.authentication.AuthSourceService;
 
 import org.slf4j.LoggerFactory;
 
@@ -119,8 +115,6 @@ import opendcs.dao.ScheduleEntryDAO;
 import opendcs.dao.SiteDAO;
 import opendcs.dao.TsGroupDAO;
 import opendcs.dao.XmitRecordDAO;
-import opendcs.util.sql.WrappedConnection;
-import ilex.util.AuthException;
 import ilex.util.Logger;
 import decodes.tsdb.BadTimeSeriesException;
 import decodes.tsdb.CTimeSeries;
@@ -1215,13 +1209,13 @@ public class SqlDatabaseIO
     */
     // MJM NOT Synchronized because it can be called from the SQL Platform Helper
     @Override
-    public void readConfig(PlatformConfig pc)
+    public PlatformConfig readConfig(PlatformConfig pc)
         throws DatabaseException
     {
         try (Connection conn = getConnection())
         {
             _configListIO.setConnection(conn);
-            _configListIO.readConfig(pc.getId());
+            return _configListIO.readConfig(pc.getId());
         }
         catch (SQLException ex)
         {
