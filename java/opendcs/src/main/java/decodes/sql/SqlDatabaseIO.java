@@ -267,7 +267,7 @@ public class SqlDatabaseIO
         commitAfterSelect = false;
         try (Connection conn = dataSource.getConnection())
         {
-            determineVersion(conn);        
+            determineVersion(conn);
             setDBDatetimeFormat(conn);
         }
         catch (SQLException ex)
@@ -581,7 +581,7 @@ public class SqlDatabaseIO
     @Override
     public synchronized void readEngineeringUnitList(EngineeringUnitList euList) throws DatabaseException
     {
-        
+
 
         try (Connection conn = getConnection())
         {
@@ -1666,7 +1666,7 @@ public class SqlDatabaseIO
         throws DatabaseException
     {
         try (Connection conn = getConnection())
-        {            
+        {
             _routingSpecListIO.setConnection(conn);
             _routingSpecListIO.readRoutingSpec(rs);
         }
@@ -1754,7 +1754,7 @@ public class SqlDatabaseIO
     @Override
     public synchronized void readDataSource(DataSource ds) throws DatabaseException
     {
-        
+
         try (Connection conn = getConnection())
         {
             _dataSourceListIO.setConnection(conn);
