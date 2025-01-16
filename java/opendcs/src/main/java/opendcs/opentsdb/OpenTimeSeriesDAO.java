@@ -63,7 +63,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.TimeZone;
 
 import org.opendcs.database.ExceptionHelpers;
@@ -1335,6 +1334,26 @@ debug1("Time series " + tsid.getUniqueString() + " already has offset = "
 		ArrayList<TimeSeriesIdentifier> ret = new ArrayList<TimeSeriesIdentifier>();
 		for (Iterator<TimeSeriesIdentifier> tsidit = cache.iterator(); tsidit.hasNext(); )
 			ret.add(tsidit.next());
+		return ret;
+	}
+
+	@Override
+	public List<TimeSeriesIdentifier> listTimeSeriesActiveFilter(boolean activeOnly)
+			throws DbIoException
+	{
+		if (System.currentTimeMillis() - lastCacheReload > cacheReloadMS)
+		{
+			reloadTsIdCache();
+		}
+		ArrayList<TimeSeriesIdentifier> ret = new ArrayList<>();
+		for (Iterator<TimeSeriesIdentifier> tsidit = cache.iterator(); tsidit.hasNext();)
+		{
+			TimeSeriesIdentifier tsid = tsidit.next();
+			if (!activeOnly || tsid.getSite().isActive())
+			{
+				ret.add(tsid);
+			}
+		}
 		return ret;
 	}
 	
