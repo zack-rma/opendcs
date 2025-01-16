@@ -54,7 +54,7 @@ public abstract class DatabaseIO
 	}
 
 	/**
-	 
+
 	 * @param settings
 	 * @return
 	 * @throws DatabaseException
@@ -67,7 +67,7 @@ public abstract class DatabaseIO
 	}
 
 	/**
-	 * 
+	 *
 	 * @param settings
 	 * @param locOverride
 	 * @return
@@ -101,7 +101,7 @@ public abstract class DatabaseIO
 		{
 			throw new DatabaseException("Unable to authenticate against the database.", ex);
 		}
-		
+
 	}
 
 	//========== Identification methods ==========================
@@ -448,7 +448,7 @@ public abstract class DatabaseIO
 	 * Returns the most recent data that the platform list was modified, this
 	 * will be the time of the most-recent platform mod.
 	 * @return the most recent data that the platform list was modified.
-	 * @throws DatabaseException 
+	 * @throws DatabaseException
 	 */
 	public abstract Date getPlatformListLMT();
 
