@@ -242,6 +242,7 @@ public class NetworkListListIO extends SqlDbObjIo
 				}
 			}
 			nl.addEntry(nle);
+			nll.add(nl);
 		}
 	}
 
@@ -262,16 +263,16 @@ public class NetworkListListIO extends SqlDbObjIo
 		if (tmType != null)
 		{
 			String qtmt;
-			if (tmType.contentEquals("goes"))
+			if (tmType.equalsIgnoreCase("goes"))
 			{
-				qtmt = "goes, goes-self-times, goes-random";
+				qtmt = "'goes', 'goes-self-times', 'goes-random'";
 			}
 			else
 			{
-				qtmt = "goes";
+				qtmt = "'goes'";
 			}
 
-			q = q + " WHERE transportMediumType IN (" + qtmt + ")";
+			q = q + " WHERE lower(transportMediumType) IN (" + qtmt + ")";
 		}
 
 		Statement stmt = createStatement();
@@ -348,6 +349,7 @@ public class NetworkListListIO extends SqlDbObjIo
 				}
 			}
 			nl.addEntry(nle);
+			nll.add(nl);
 		}
 	}
 	
