@@ -34,6 +34,8 @@
 package decodes.xml;
 
 import decodes.db.DataType;
+import decodes.db.EngineeringUnit;
+import decodes.db.UnitConverterDb;
 import ilex.util.Counter;
 import ilex.util.FileCounter;
 import ilex.util.Logger;
@@ -60,6 +62,7 @@ import opendcs.dai.LoadingAppDAI;
 import opendcs.dai.PlatformStatusDAI;
 import opendcs.dai.ScheduleEntryDAI;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
@@ -1160,16 +1163,10 @@ e.printStackTrace();
 		readEngineeringUnitList(ucs.getDatabase().engineeringUnitList);
 	}
 
-	public void deleteUnitConverterSet( Long ucId ) throws DatabaseException
+	public void deleteUnitConverter( Long ucId ) throws DatabaseException
 	{
-		// TODO: Implement this deletion
+		throw new NotImplementedException("XmlDatabaseIO.deleteUnitConverter");
 	}
-
-	public void writeUnitConverterSet( UnitConverterSet ucs ) throws DatabaseException
-	{
-		writeEngineeringUnitList(ucs.getDatabase().engineeringUnitList);
-	}
-
 
 	/**
 	 * Writes the entire collection of engineering units to the database.
@@ -1197,6 +1194,16 @@ e.printStackTrace();
 		{
 			Database.setDb(oldDb);
 		}
+	}
+
+	/**
+	 Stores the provided list of UnitConverter objects into the database.
+	 @param ucs the list to store
+	 */
+	@Override
+	public void insertUnitConverter( UnitConverterDb ucs )
+	{
+		throw new NotImplementedException("XmlDatabaseIO.insertUnitConverter");
 	}
 
 	//=============== Object-level Read/Write Functions ============
@@ -1768,6 +1775,16 @@ e.printStackTrace();
 		String fn = xmldir + File.separator + DataSourceDir
 					+ File.separator + ob.makeFileName();
 		tryDelete(fn);
+	}
+
+	/**
+	 * Deletes an EngineeringUnit from the database by its abbreviation.
+	 * @param eu object with the abbreviation set.
+	 */
+	@Override
+	public void deleteEngineeringUnit(EngineeringUnit eu)
+	{
+		throw new NotImplementedException("deleteEngineeringUnit");
 	}
 
 	/**

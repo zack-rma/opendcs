@@ -911,18 +911,18 @@ public class SqlDatabaseIO
     }
 
     @Override
-    public synchronized void writeUnitConverterSet(UnitConverterSet ucs)
+    public synchronized void insertUnitConverter(UnitConverterDb uc)
             throws DatabaseException
     {
         try (Connection conn = getConnection())
         {
             _unitConverterIO.setConnection(conn);
 
-            _unitConverterIO.write(ucs);
+            _unitConverterIO.addNew(uc);
         }
         catch (SQLException ex)
         {
-            throw new DatabaseException("writeUnitConverterSet: ", ex);
+            throw new DatabaseException("insertUnitConverter: ", ex);
         }
         finally
         {
@@ -931,7 +931,7 @@ public class SqlDatabaseIO
     }
 
     @Override
-    public synchronized void deleteUnitConverterSet(Long ucId)
+    public synchronized void deleteUnitConverter(Long ucId)
             throws DatabaseException
     {
         try (Connection conn = getConnection())
@@ -1688,6 +1688,30 @@ public class SqlDatabaseIO
         {
             _dataSourceListIO.setConnection(conn);
             _dataSourceListIO.delete(ds);
+        }
+        catch (SQLException ex)
+        {
+            throw new DatabaseException("deleteDataSource.", ex);
+        }
+        finally
+        {
+            _dataSourceListIO.setConnection(null);
+        }
+    }
+
+    /**
+     * Deletes an EngineeringUnit from the database by its abbreviation.
+     * @param eu object with the abbreviation set.
+     * @throws DatabaseException if a database error occurs.
+     */
+    @Override
+    public synchronized void deleteEngineeringUnit(EngineeringUnit eu)
+            throws DatabaseException
+    {
+        try (Connection conn = getConnection())
+        {
+            _engineeringUnitIO.setConnection(conn);
+            _engineeringUnitIO.delete(eu);
         }
         catch (SQLException ex)
         {
