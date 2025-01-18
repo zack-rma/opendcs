@@ -238,7 +238,7 @@ public abstract class DatabaseIO
 	 @param pl the list to populate
 	 @param tmType the transport medium type to filter on
 	 */
-	public abstract void readPlatformList(PlatformList pl, String tmType)
+	public abstract PlatformList readPlatformList(PlatformList pl, String tmType)
 			throws DatabaseException;
 
 
@@ -324,7 +324,7 @@ public abstract class DatabaseIO
 	* </p>
 	  @param p the platform to read
 	*/
-	public abstract void readPlatform( Platform p )
+	public abstract Platform readPlatform( Platform p )
 		throws DatabaseException;
 
 	/**
