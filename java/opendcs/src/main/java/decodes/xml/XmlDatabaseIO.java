@@ -1313,7 +1313,7 @@ e.printStackTrace();
 	 * </p>
 	 * @param p object in which to store data
 	 */
-	public void readPlatform( Platform p ) throws DatabaseException
+	public Platform readPlatform( Platform p ) throws DatabaseException
 	{
 		String fn = makePath(PlatformDir,
 			"p" + platIdFormat.format(p.getId().getValue()));
@@ -1336,7 +1336,7 @@ e.printStackTrace();
 			Logger.instance().debug1("XML readPlatform, fileLMT="
 				+ myParser.getFileLMT() + ", platformLMT=" + p.lastModifyTime);
 
-			return;
+			return p;
 		}
 		throw new DatabaseException(
 			"Cannot read platform from file '" + fn + "'");
@@ -1353,7 +1353,7 @@ e.printStackTrace();
 	 * @param pl object in which to store data
 	 * @param tmType the transport medium type to filter on
 	 */
-	public synchronized void readPlatformList(PlatformList pl, String tmType)
+	public synchronized PlatformList readPlatformList(PlatformList pl, String tmType)
 			throws DatabaseException
 	{
 		Database oldDb = Database.getDb();
@@ -1383,6 +1383,7 @@ e.printStackTrace();
 					}
 				}
 			}
+			return pl;
 		}
 		catch(Exception e)
 		{
