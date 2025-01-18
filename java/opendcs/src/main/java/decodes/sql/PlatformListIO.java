@@ -303,7 +303,7 @@ public class PlatformListIO extends SqlDbObjIo
      * @param platformList the PlatformList object to populate
      * @param tmType the transport medium type to filter on
      */
-    public void read(PlatformList platformList, String tmType)
+    public PlatformList read(PlatformList platformList, String tmType)
             throws SQLException, DatabaseException
     {
         log.debug("Reading PlatformList...");
@@ -331,11 +331,11 @@ public class PlatformListIO extends SqlDbObjIo
                 tmType = tmType.toLowerCase();
                 if (tmType.equals("goes"))
                 {
-                    filter = "goes, goes-self-timed, goes-random";
+                    filter = "'goes', 'goes-self-timed', 'goes-random'";
                 }
                 else
                 {
-                    filter = "goes";
+                    filter = "'goes'";
                 }
 
                 q = q + " where exists(select PLATFORMID from TRANSPORTMEDIUM where lower(MEDIUMTYPE) IN ("
@@ -397,6 +397,7 @@ public class PlatformListIO extends SqlDbObjIo
             }
         }
         readAllTransportMedia(platformList);
+        return platformList;
     }
 
     protected void readAllTransportMedia(PlatformList platformList)
