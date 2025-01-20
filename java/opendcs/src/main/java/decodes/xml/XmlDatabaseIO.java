@@ -59,6 +59,7 @@ import opendcs.dai.LoadingAppDAI;
 import opendcs.dai.PlatformStatusDAI;
 import opendcs.dai.ScheduleEntryDAI;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
@@ -776,37 +777,7 @@ public class XmlDatabaseIO extends DatabaseIO
 	public void readNetworkListList( NetworkListList nll, String tmType)
 			throws DatabaseException
 	{
-		try
-		{
-			String ls[] = listDirectory(NetworkListDir);
-			if (ls == null)
-				return;
-			for(int i=0; i<ls.length; i++)
-			{
-				InputStream is = null;
-				try
-				{
-					is = getInputStream(NetworkListDir, ls[i]);
-					NetworkList ob = (NetworkList)myParser.parse(is);
-					if (ob.transportMediumType.equalsIgnoreCase(tmType))
-					{
-						nll.add(ob);
-					}
-				}
-				// Catch other type (IO or bad cast) exceptions
-				catch(Exception e)
-				{
-					Logger.instance().log(Logger.E_FAILURE,
-							"Error parsing network list '" + ls[i] + "' " + e);
-				}
-				finally
-				{
-					if (is != null)
-						try { is.close(); } catch(Exception e) {}
-				}
-			}
-		}
-		catch(java.io.IOException e) { }
+		throw new NotImplementedException("XmlDatabaseIO.readNetworkListList with filter not implemented");
 	}
 	
 	/**
