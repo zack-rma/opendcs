@@ -33,6 +33,8 @@
 */
 package decodes.xml;
 
+import decodes.db.RoutingExecStatus;
+import decodes.db.RoutingStatus;
 import decodes.db.DataType;
 import decodes.db.EngineeringUnit;
 import decodes.db.UnitConverterDb;
@@ -56,6 +58,7 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -1033,6 +1036,24 @@ e.printStackTrace();
 		}
 	}
 
+	/**
+	 * Returns the list of RoutingSpec statuses for the routing specs
+	 * stored to the database. XML implementation is not yet available.
+	 * @throws DatabaseException upon error
+	 */
+	public List<RoutingStatus> readRoutingSpecStatus()
+	{
+		throw new UnsupportedOperationException("readRoutingSpecStatus");
+	}
+
+	/**
+	 * Returns the list of RoutingExecStatus objects defined in this database.
+	 * @throws DatabaseException upon error
+	 */
+	public List<RoutingExecStatus> readRoutingExecStatus(DbKey scheduleEntryId)
+	{
+		throw new UnsupportedOperationException("readRoutingExecStatus");
+	}
 
 	/**
 	 * Returns the list of RoutingSpec objects defined in this database.

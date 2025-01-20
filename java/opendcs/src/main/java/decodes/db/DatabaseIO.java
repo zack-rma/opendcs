@@ -297,6 +297,16 @@ public abstract class DatabaseIO
 		throws DatabaseException;
 
 	/**
+	 Retrieves the list of RoutingStatus objects defined in this database.
+	 */
+	public abstract List<RoutingStatus> readRoutingSpecStatus() throws DatabaseException;
+
+	/**
+	 Retrieves the list of RoutingExecStatus objects defined in this database.
+	 */
+	public abstract List<RoutingExecStatus> readRoutingExecStatus(DbKey scheduleEntryId) throws DatabaseException;
+
+	/**
 	Populates the list of Site objects defined in this database.
 	Objects in this list may be only partially populated (key values
 	and primary display attributes only).

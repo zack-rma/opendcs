@@ -77,6 +77,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.TimeZone;
 
 import org.slf4j.LoggerFactory;
@@ -768,6 +769,45 @@ public class SqlDatabaseIO
             _routingSpecListIO.setConnection(null);
         }
     }
+
+    @Override
+    public synchronized List<RoutingStatus> readRoutingSpecStatus() throws DatabaseException
+    {
+        try (Connection conn = getConnection())
+        {
+            _routingSpecListIO.setConnection(conn);
+           return _routingSpecListIO.readRoutingSpecStatus(makeLoadingAppDAO());
+        }
+        catch (SQLException ex)
+        {
+            log.error("Unable to read routing spec status list.", ex);
+            throw new DatabaseException("Unable to read routing spec status list", ex);
+        }
+        finally
+        {
+            _routingSpecListIO.setConnection(null);
+        }
+    }
+
+    @Override
+    public synchronized List<RoutingExecStatus> readRoutingExecStatus(DbKey scheduleEntryId) throws DatabaseException
+    {
+        try (Connection conn = getConnection())
+        {
+            _routingSpecListIO.setConnection(conn);
+           return _routingSpecListIO.readRoutingExecStatus(scheduleEntryId);
+        }
+        catch (SQLException ex)
+        {
+            log.error("Unable to read routing exec status list.", ex);
+            throw new DatabaseException("Unable to read routing exec status list", ex);
+        }
+        finally
+        {
+            _routingSpecListIO.setConnection(null);
+        }
+    }
+
 
     /**
     * Returns the list of DataSource objects defined in this database.
