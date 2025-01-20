@@ -3,10 +3,7 @@
 */
 package decodes.db;
 
-import java.sql.SQLException;
 import java.util.*;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import opendcs.dai.LoadingAppDAI;
 import opendcs.dai.PlatformStatusDAI;
@@ -15,10 +12,8 @@ import opendcs.dai.ScheduleEntryDAI;
 import org.opendcs.authentication.AuthSourceService;
 import org.opendcs.database.SimpleDataSource;
 import org.opendcs.spi.authentication.AuthSource;
-import org.xml.sax.SAXException;
 
 import ilex.util.AuthException;
-import ilex.util.Counter;
 import decodes.sql.DbKey;
 import decodes.sql.DecodesDatabaseVersion;
 import decodes.sql.SqlDatabaseIO;
@@ -251,8 +246,18 @@ public abstract class DatabaseIO
 	and primary display attributes only).
 	  @param rsl the list to populate
 	*/
-	public abstract void readRoutingSpecList(RoutingSpecList rsl)
+	public abstract RoutingSpecList readRoutingSpecList(RoutingSpecList rsl)
 		throws DatabaseException;
+
+	/**
+	 Retrieves the list of RoutingStatus objects defined in this database.
+	 */
+	public abstract List<RoutingStatus> readRoutingSpecStatus() throws DatabaseException;
+
+	/**
+	 Retrieves the list of RoutingExecStatus objects defined in this database.
+	 */
+	public abstract List<RoutingExecStatus> readRoutingExecStatus(DbKey scheduleEntryId) throws DatabaseException;
 
 	/**
 	Populates the list of Site objects defined in this database.
