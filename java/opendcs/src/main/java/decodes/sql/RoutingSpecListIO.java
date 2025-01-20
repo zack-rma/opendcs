@@ -182,7 +182,6 @@ public class RoutingSpecListIO extends SqlDbObjIo
                 rsList.add(routingSpec);
             }
         }
-        return rsList;
     }
 
     public List<RoutingExecStatus> readRoutingExecStatus(DbKey scheduleEntryId) throws DatabaseException
