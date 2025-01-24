@@ -49,7 +49,9 @@ import decodes.tsdb.DbIoException;
  * Data Access Object for writing/reading DbEnum objects to/from a SQL database
  * @author mmaloney Mike Maloney, Cove Software, LLC
  */
-public class EnumSqlDao extends DaoBase implements EnumDAI
+public class EnumSqlDao 
+	extends DaoBase 
+	implements EnumDAI
 {
 	private static final Logger log = LoggerFactory.getLogger(EnumSqlDao.class);
 	private static DbObjectCache<DbEnum> cache = new DbObjectCache<DbEnum>(3600000, false);
@@ -445,7 +447,7 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 			else if ((fromEnumVal == null || fromEnumVal.isEmpty()) && existing == null)
 			{
 				q = "insert into enumvalue(enumid, enumvalue, description, editclass, sortnumber) values(?,?,?,?,?)";
-				doModify(q, enumId, enumVal.getValue(), enumVal.getDescription(), startEndTz, sortNum);
+				doModify(q, enumId.getValue(), enumVal.getValue(), enumVal.getDescription(), startEndTz, sortNum);
 			}
 			else if (fromEnumVal == null || fromEnumVal.isEmpty())
 			{
