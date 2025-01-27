@@ -27,8 +27,6 @@ import decodes.tsdb.compedit.ComputationInList;
 public interface ComputationDAI
 	extends DaiBase
 {
-	Predicate<DbComputation> defaultFilter = comp -> true;
-
 	/**
 	 * Returns the computation with given ID. The computation is filled
 	 * with all of its property, parameter, and algorithm links.
