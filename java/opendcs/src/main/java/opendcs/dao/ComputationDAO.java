@@ -58,7 +58,6 @@
 */
 package opendcs.dao;
 
-import decodes.tsdb.CompRefFilter;
 import ilex.util.Logger;
 import ilex.util.TextUtil;
 
