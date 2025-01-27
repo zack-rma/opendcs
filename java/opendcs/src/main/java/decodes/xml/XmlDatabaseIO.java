@@ -1105,7 +1105,7 @@ e.printStackTrace();
 	 * @return list of routing spec IDs and names, or null if not used.
 	 * @throws DatabaseException upon error
 	 */
-	public synchronized String routeSpecsUsing(long groupId)
+	public synchronized List<RoutingSpec> routeSpecsUsing(long groupId)
 			throws DatabaseException
 	{
 		throw new UnsupportedOperationException("routeSpecsUsing not implemented for XML.");

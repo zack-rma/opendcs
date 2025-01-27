@@ -3,6 +3,7 @@
 */
 package decodes.db;
 
+import java.sql.SQLException;
 import java.util.*;
 
 import opendcs.dai.LoadingAppDAI;
@@ -497,13 +498,13 @@ public abstract class DatabaseIO
 
 	/**
 	 * If the presentation group referenced by groupId is used by one or more routing
-	 * specs, return a list of routing spec IDs and names. If groupId is not used,
+	 * specs, return a list of routing specs populated with only IDs and names. If groupId is not used,
 	 * return null.
 	 * @param groupId the ID of the presentation group to check
-	 * @return string concatenated list of routing spec IDs and names, or null if not used.
-	 * @throws DatabaseException if an error is encountered
+	 * @return List<RoutingSpec> list of routing specs populated with only IDs and names, or null if not used.
+	 * @throws SQLException if an error is encountered
 	 */
-	public abstract String routeSpecsUsing(long groupId)
+	public abstract List<RoutingSpec> routeSpecsUsing(long groupId)
 			throws DatabaseException;
 
 	/**
