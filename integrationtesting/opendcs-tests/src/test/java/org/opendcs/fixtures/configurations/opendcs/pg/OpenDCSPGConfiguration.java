@@ -1,6 +1,4 @@
-package org.opendcs.fixtures.configurations.opendcs.pg;
-
-import static org.junit.jupiter.api.Assertions.fail;
+package org.opendcs.fixtures.configuration.opendcs.pg;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,8 +21,9 @@ import org.opendcs.database.MigrationManager;
 import org.opendcs.database.api.OpenDcsDatabase;
 import org.opendcs.database.SimpleDataSource;
 import org.opendcs.database.impl.opendcs.OpenDcsPgProvider;
-import org.opendcs.fixtures.UserPropertiesBuilder;
-import org.opendcs.spi.configuration.Configuration;
+import org.opendcs.fixtures.configuration.Configuration;
+import org.opendcs.fixtures.configuration.Programs;
+import org.opendcs.fixtures.configuration.UserPropertiesBuilder;
 import org.opendcs.spi.database.MigrationProvider;
 import org.testcontainers.containers.PostgreSQLContainer;
 
@@ -53,7 +52,7 @@ import uk.org.webcompere.systemstubs.security.SystemExit;
  */
 public class OpenDCSPGConfiguration implements Configuration
 {
-    private static Logger log = Logger.getLogger(OpenDCSPGConfiguration.class.getName());
+    private static final Logger log = Logger.getLogger(OpenDCSPGConfiguration.class.getName());
 
     public static final String NAME = "OpenDCS-Postgres";
 
@@ -133,6 +132,8 @@ public class OpenDCSPGConfiguration implements Configuration
         }
 
         db.start();
+		environmentVars.put("DB_URL",db.getJdbcUrl());
+		environment.set("DB_URL",db.getJdbcUrl());
         createPropertiesFile(configBuilder, this.propertiesFile);
         profile = Profile.getProfile(this.propertiesFile);
         DataSource ds = new SimpleDataSource(db.getJdbcUrl(),db.getUsername(),db.getPassword());
@@ -291,4 +292,22 @@ public class OpenDCSPGConfiguration implements Configuration
             return databases;
         }
     }
+
+	@Override
+	public void loadXMLData(String[] files, SystemExit exit, SystemProperties properties) throws Exception
+	{
+		File logFile = new File(userDir, "opentsdb-db-import.log");
+		EnvironmentVariables envVars = new EnvironmentVariables(envMapper());
+		Programs.DbImport(logFile, this.propertiesFile, envVars, exit, properties, files);
+	}
+
+	private Map<String, String> envMapper()
+	{
+		Map<String, String> env = new HashMap<>();
+		for (Map.Entry<Object, Object> entry : this.environmentVars.entrySet())
+		{
+			env.put(entry.getKey().toString(), entry.getValue().toString());
+		}
+		return env;
+	}
 }
