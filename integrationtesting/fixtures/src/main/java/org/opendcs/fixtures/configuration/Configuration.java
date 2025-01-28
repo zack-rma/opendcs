@@ -4,10 +4,11 @@ import java.io.File;
 import java.util.Map;
 
 import decodes.db.Database;
-import decodes.db.DatabaseIO;
+import decodes.db.DatabaseException;
+import decodes.db.PlatformStatus;
+import decodes.db.ScheduleEntryStatus;
 import decodes.tsdb.TimeSeriesDb;
 import decodes.tsdb.TsdbAppTemplate;
-import decodes.util.DecodesSettings;
 import opendcs.dao.DaoBase;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.properties.SystemProperties;
@@ -100,4 +101,10 @@ public interface Configuration
     * @return
     */
     public String getName();
+
+    void loadXMLData(String[] files, SystemExit exit, SystemProperties properties) throws Exception;
+
+    void storeScheduleEntryStatus(ScheduleEntryStatus status) throws DatabaseException;
+
+    void storePlatformStatus(PlatformStatus status) throws DatabaseException;
 }
