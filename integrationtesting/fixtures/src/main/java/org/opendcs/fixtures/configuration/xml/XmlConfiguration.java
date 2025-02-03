@@ -7,6 +7,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import decodes.db.ScheduleEntryStatus;
+import decodes.polling.DacqEvent;
+import decodes.sql.DbKey;
 import org.apache.commons.io.FileUtils;
 import org.opendcs.database.DatabaseService;
 import org.opendcs.database.api.OpenDcsDatabase;
@@ -28,6 +31,7 @@ public class XmlConfiguration implements Configuration
     private static final Logger logger = Logger.getLogger(XmlConfiguration.class.getName());
 
     public static final String NAME = "OpenDCS-XML";
+    private static final String NOT_SUPPORTED = "Not supported by the XML database.";
 
     private File userDir;
     private File propertiesFile;
@@ -121,5 +125,30 @@ public class XmlConfiguration implements Configuration
             }
             return databases;
         }
+    }
+
+
+    @Override
+    public void storeScheduleEntryStatus(ScheduleEntryStatus status)
+    {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public void deleteScheduleEntryStatus(DbKey scheduleEntryId)
+    {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public void storeDacqEvent(DacqEvent event)
+    {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public void deleteDacqEventForPlatform(DbKey platformId)
+    {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
     }
 }

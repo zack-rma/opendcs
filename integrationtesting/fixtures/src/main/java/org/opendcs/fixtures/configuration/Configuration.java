@@ -3,13 +3,15 @@ package org.opendcs.fixtures.configuration;
 import java.io.File;
 import java.util.Map;
 
+import decodes.db.DatabaseException;
+import decodes.db.ScheduleEntryStatus;
+import decodes.polling.DacqEvent;
+import decodes.sql.DbKey;
 import org.opendcs.database.api.OpenDcsDatabase;
 
 import decodes.db.Database;
-import decodes.db.DatabaseIO;
 import decodes.tsdb.TimeSeriesDb;
 import decodes.tsdb.TsdbAppTemplate;
-import decodes.util.DecodesSettings;
 import opendcs.dao.DaoBase;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.properties.SystemProperties;
@@ -104,4 +106,12 @@ public interface Configuration
     public String getName();
 
     public OpenDcsDatabase getOpenDcsDatabase() throws Throwable;
+
+    void storeScheduleEntryStatus(ScheduleEntryStatus status) throws DatabaseException;
+
+    void deleteScheduleEntryStatus(DbKey scheduleEntryId) throws DatabaseException;
+
+    void storeDacqEvent(DacqEvent event) throws DatabaseException;
+
+    void deleteDacqEventForPlatform(DbKey platformId) throws DatabaseException;
 }

@@ -1,7 +1,5 @@
 package org.opendcs.fixtures.configuration.opendcs.pg;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -16,6 +14,14 @@ import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
+import decodes.db.DatabaseException;
+import decodes.db.DatabaseIO;
+import decodes.db.ScheduleEntry;
+import decodes.db.ScheduleEntryStatus;
+import decodes.polling.DacqEvent;
+import decodes.sql.DbKey;
+import opendcs.dai.DacqEventDAI;
+import opendcs.dai.ScheduleEntryDAI;
 import org.apache.commons.io.FileUtils;
 import org.jdbi.v3.core.Jdbi;
 import org.opendcs.database.DatabaseService;
@@ -288,6 +294,75 @@ public class OpenDCSPGConfiguration implements Configuration
                 buildDatabases();
             }
             return databases;
+        }
+    }
+
+    @Override
+    public void storeScheduleEntryStatus(ScheduleEntryStatus status) throws DatabaseException
+    {
+        try
+        {
+            DatabaseIO dbIo = getDecodesDatabase().getDbIo();
+            try(ScheduleEntryDAI dai = dbIo.makeScheduleEntryDAO())
+            {
+                dai.writeScheduleStatus(status);
+            }
+        }
+        catch(Throwable e)
+        {
+            throw new DatabaseException("Error storing schedule entry status", e);
+        }
+    }
+
+    @Override
+    public void deleteScheduleEntryStatus(DbKey scheduleEntryId) throws DatabaseException
+    {
+        try
+        {
+            DatabaseIO dbIo = getDecodesDatabase().getDbIo();
+            try(ScheduleEntryDAI dai = dbIo.makeScheduleEntryDAO())
+            {
+                ScheduleEntry se = new ScheduleEntry(scheduleEntryId);
+                dai.deleteScheduleStatusFor(se);
+            }
+        }
+        catch(Throwable e)
+        {
+            throw new DatabaseException("Error deleting schedule entry status", e);
+        }
+    }
+
+    @Override
+    public void storeDacqEvent(DacqEvent event) throws DatabaseException
+    {
+        try
+        {
+            TimeSeriesDb db = getTsdb();
+            try(DacqEventDAI dai = db.makeDacqEventDAO())
+            {
+                dai.writeEvent(event);
+            }
+        }
+        catch(Throwable e)
+        {
+            throw new DatabaseException("Error storing dacq event", e);
+        }
+    }
+
+    @Override
+    public void deleteDacqEventForPlatform(DbKey platformId) throws DatabaseException
+    {
+        try
+        {
+            TimeSeriesDb db = getTsdb();
+            try(DacqEventDAI dai = db.makeDacqEventDAO())
+            {
+                dai.deleteEventsForPlatform(platformId);
+            }
+        }
+        catch(Throwable e)
+        {
+            throw new DatabaseException("Error deleting dacq event", e);
         }
     }
 }
