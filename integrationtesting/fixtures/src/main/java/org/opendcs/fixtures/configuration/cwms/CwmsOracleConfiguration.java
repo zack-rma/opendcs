@@ -9,6 +9,10 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+import decodes.db.DatabaseException;
+import decodes.tsdb.CTimeSeries;
+import decodes.tsdb.TimeSeriesIdentifier;
+import opendcs.dai.TimeSeriesDAI;
 import org.apache.commons.io.FileUtils;
 import org.opendcs.database.DatabaseService;
 import org.opendcs.database.api.OpenDcsDatabase;
@@ -231,5 +235,31 @@ public class CwmsOracleConfiguration implements Configuration
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void storeTimeSeries(CTimeSeries timeSeries) throws Exception
+    {
+        try (TimeSeriesDAI dai = getTsdb().makeTimeSeriesDAO())
+        {
+            dai.saveTimeSeries(timeSeries);
+        }
+        catch(Throwable e)
+        {
+            throw new DatabaseException("Failed to store time series", e);
+        }
+    }
+
+    @Override
+    public void deleteTimeSeries(TimeSeriesIdentifier timeSeriesId) throws Exception
+    {
+        try (TimeSeriesDAI dai = getTsdb().makeTimeSeriesDAO())
+        {
+            dai.deleteTimeSeries(timeSeriesId);
+        }
+        catch(Throwable e)
+        {
+            throw new DatabaseException("Failed to delete time series", e);
+        }
     }
 }
