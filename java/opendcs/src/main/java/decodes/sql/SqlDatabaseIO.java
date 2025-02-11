@@ -494,6 +494,13 @@ public class SqlDatabaseIO
         }
     }
 
+    @Override
+    public DataType lookupDataType(String dtCode)
+            throws DatabaseException
+    {
+        throw new UnsupportedOperationException("lookupDataType not implemented for SQL.");
+    }
+
     /**
     * Reads the set of known data-type objects in this database.
     * Objects in this collection are complete.
