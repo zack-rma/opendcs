@@ -254,6 +254,15 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 			throw new DbIoException("Error reading status file: " + ex);
 		}
 	}
+
+	/**
+	 * This method is not supported for XML databases.
+	 */
+	@Override
+	public ScheduleEntryStatus readScheduleStatusById(DbKey scheduleEntryStatusId)
+	{
+		throw new UnsupportedOperationException("XML Database does not support readScheduleStatusById.");
+	}
 	
 	/**
 	 * Reads the next ScheduleEntryStatus from the file, starting at the current
