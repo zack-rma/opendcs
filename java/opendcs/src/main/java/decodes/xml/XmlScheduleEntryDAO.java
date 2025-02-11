@@ -122,6 +122,19 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 		return null;
 	}
 
+	@Override
+	public ScheduleEntry readScheduleEntry(DbKey id) throws DbIoException
+	{
+		ArrayList<ScheduleEntry> ses = listScheduleEntries(null);
+		for(ScheduleEntry se : ses)
+		{
+			if(se.getId().equals(id))
+			{
+				return se;
+			}
+		}
+		return null;
+	}
 
 	@Override
 	public boolean checkScheduleEntry(ScheduleEntry scheduleEntry)
@@ -326,12 +339,6 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 		}
 	}
 
-	@Override
-	public ScheduleEntry readScheduleEntry(DbKey entryId) throws DbIoException
-	{
-		throw new UnsupportedOperationException("XML Database does not support readScheduleEntry(DbKey).");
-	}
-	
 	@Override
 	public synchronized void writeScheduleStatus(ScheduleEntryStatus ses)
 		throws DbIoException
