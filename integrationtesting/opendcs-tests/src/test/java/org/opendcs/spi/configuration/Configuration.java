@@ -1,4 +1,4 @@
-package org.opendcs.fixtures.configuration;
+package org.opendcs.spi.configuration;
 
 import java.io.File;
 import java.util.Map;
@@ -76,7 +76,7 @@ public interface Configuration
     }
 
     /**
-     * Returns an independent instance of the {@link decodes.db.Database} Decodes Database for this configuration.
+     * Returns an independent instance of the {@decodes.db.Database} Decodes Database for this configuration.
      *
      * @return Instance of the Decodes Database for this run/test.
      * @throws Throwable
@@ -104,6 +104,4 @@ public interface Configuration
     public String getName();
 
     public OpenDcsDatabase getOpenDcsDatabase() throws Throwable;
-
-	void loadXMLData(String[] files, SystemExit exit, SystemProperties properties) throws Exception;
 }
