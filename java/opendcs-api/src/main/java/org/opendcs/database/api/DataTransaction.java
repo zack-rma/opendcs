@@ -2,7 +2,6 @@ package org.opendcs.database.api;
 
 import java.util.Optional;
 
-import javax.management.openmbean.OpenDataException;
 
 /**
  * Instance of this class are used to hold appropriate connections
@@ -29,7 +28,7 @@ public interface DataTransaction extends AutoCloseable {
      *            for the connections they use.
      * @param connectionType
      * @return optional with the instance of the connection type, if available.
-     * @throws OpenDCSDataException any issues with the connection, if implementations check validity.
+     * @throws OpenDcsDataException any issues with the connection, if implementations check validity.
      */
     <T> Optional<T> connection(Class<T> connectionType) throws OpenDcsDataException;
 

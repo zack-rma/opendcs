@@ -5,6 +5,7 @@ import java.util.Date;
 
 import decodes.db.ScheduleEntry;
 import decodes.db.ScheduleEntryStatus;
+import decodes.sql.DbKey;
 import decodes.tsdb.CompAppInfo;
 import decodes.tsdb.DbIoException;
 import decodes.tsdb.NoSuchObjectException;
@@ -82,6 +83,8 @@ public interface ScheduleEntryDAI
 	ScheduleEntryStatus
 		readScheduleStatusById(DbKey scheduleEntryStatusId)
 		throws DbIoException;
+
+	ScheduleEntry readScheduleEntry(DbKey entryId) throws DbIoException;
 
 	/**
 	 * Write the passed schedule status to the database. This may be an

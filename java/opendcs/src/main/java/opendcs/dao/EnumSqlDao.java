@@ -570,6 +570,22 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 			rs2EnumValue(rs, dbenum);
 		},dbenum.getId());
 	}
+
+	private void readValues(DaoBase dao, DbEnum dbenum) throws SQLException, DbIoException
+	{
+		int dbVer = db.getDecodesDatabaseVersion();
+
+		String q =
+				"SELECT enumId, enumValue, description, " +
+						"execClass, editClass";
+		if (dbVer >= DecodesDatabaseVersion.DECODES_DB_6)
+			q = q + ", sortNumber";
+		q = q + " FROM EnumValue WHERE EnumID = ?";// + dbenum.getId();
+		//ResultSet rs = doQuery2(q);
+		dao.doQuery(q,(rs)-> {
+			rs2EnumValue(rs, dbenum);
+		},dbenum.getId());
+	}
 	
 	private void rs2EnumValue(ResultSet rs, DbEnum dbEnum)
 		throws SQLException
@@ -651,44 +667,6 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 	public Collection<DbEnum> getEnums(DataTransaction tx) throws OpenDcsDataException {
 		// TODO Auto-generated method stub
 		throw new UnsupportedOperationException("Unimplemented method 'getEnums'");
-	}
-
-	@Override
-	public Optional<DbEnum> getEnum(DataTransaction tx, String enumName) throws OpenDcsDataException
-	{
-		synchronized(cache)
-		{
-			DbEnum ret = cache.getByUniqueName(enumName);
-			if (ret != null)
-			{
-				return Optional.of(ret);
-			}
-
-			int dbVer = db.getDecodesDatabaseVersion();
-			String q = "SELECT " + getEnumColumns(dbVer) + " FROM Enum";
-			q = q + " where lower(name) = lower(?)";// + sqlString(enumName.toLowerCase());
-			Connection conn = tx.connection(Connection.class)
-						        .orElseThrow(() -> new OpenDcsDataException("JDBC Connection not available in this transaction."));
-			try (DaoHelper helper = new DaoHelper(this.db, "helper-enum", conn))
-			{
-				ret = helper.getSingleResult(q, rs -> rs2Enum(rs, dbVer), enumName);
-				if (ret == null)
-				{
-					warning("No such enum '" + enumName + "'");
-					return Optional.empty();
-				}
-				else
-				{
-					readValues(helper, ret);
-					cache.put(ret);
-					return Optional.of(ret);
-				}
-			}
-			catch (DbIoException | SQLException ex)
-			{
-				throw new OpenDcsDataException("Error retrieving Enum values",ex);
-			}
-		}
 	}
 
 	@Override
@@ -777,6 +755,44 @@ public class EnumSqlDao extends DaoBase implements EnumDAI
 		catch(DbIoException | SQLException ex)
 		{
 			throw new OpenDcsDataException("enum modify/delete failed for " + dbEnum.toString(), ex);
+		}
+	}
+
+	@Override
+	public Optional<DbEnum> getEnum(DataTransaction tx, String enumName) throws OpenDcsDataException
+	{
+		synchronized(cache)
+		{
+			DbEnum ret = cache.getByUniqueName(enumName);
+			if (ret != null)
+			{
+				return Optional.of(ret);
+			}
+
+			int dbVer = db.getDecodesDatabaseVersion();
+			String q = "SELECT " + getEnumColumns(dbVer) + " FROM Enum";
+			q = q + " where lower(name) = lower(?)";// + sqlString(enumName.toLowerCase());
+			Connection conn = tx.connection(Connection.class)
+					.orElseThrow(() -> new OpenDcsDataException("JDBC Connection not available in this transaction."));
+			try (DaoHelper helper = new DaoHelper(this.db, "helper-enum", conn))
+			{
+				ret = helper.getSingleResult(q, rs -> rs2Enum(rs, dbVer), enumName);
+				if (ret == null)
+				{
+					warning("No such enum '" + enumName + "'");
+					return Optional.empty();
+				}
+				else
+				{
+					readValues(helper, ret);
+					cache.put(ret);
+					return Optional.of(ret);
+				}
+			}
+			catch (DbIoException | SQLException ex)
+			{
+				throw new OpenDcsDataException("Error retrieving Enum values",ex);
+			}
 		}
 	}
 

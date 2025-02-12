@@ -325,6 +325,12 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 			throw new DbIoException("Cannot open '" + fn + "': " + ex);
 		}
 	}
+
+	@Override
+	public ScheduleEntry readScheduleEntry(DbKey entryId) throws DbIoException
+	{
+		throw new UnsupportedOperationException("XML Database does not support readScheduleEntry(DbKey).");
+	}
 	
 	@Override
 	public synchronized void writeScheduleStatus(ScheduleEntryStatus ses)
