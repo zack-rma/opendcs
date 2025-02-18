@@ -181,7 +181,7 @@ public class PlatformListIO extends SqlDbObjIo
      * @param platformList the PlatformList object to populate
      * @param tmType the transport medium type to filter on
      */
-    public PlatformList read(PlatformList platformList, String tmType)
+    public void read(PlatformList platformList, String tmType)
             throws SQLException, DatabaseException
     {
         log.debug("Reading PlatformList...");
@@ -279,7 +279,6 @@ public class PlatformListIO extends SqlDbObjIo
             }
         }
         readAllTransportMedia(platformList);
-        return platformList;
     }
 
     protected void readAllTransportMedia(PlatformList platformList)
@@ -422,7 +421,7 @@ public class PlatformListIO extends SqlDbObjIo
     * This reads the "complete" data for the given Platform.
     * @param p the Platform object with the ID set
     */
-    public Platform readPlatform(Platform p)
+    public void readPlatform(Platform p)
         throws SQLException, DatabaseException
     {
         final AtomicBoolean resultsExist = new AtomicBoolean(false);
@@ -552,7 +551,6 @@ public class PlatformListIO extends SqlDbObjIo
             throw new DatabaseException(msg, new ValueNotFoundException(msg));
         }
         readPlatformSensors(p);
-        return p;
     }
 
     /**

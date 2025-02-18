@@ -1,4 +1,19 @@
 /*
+ * Copyright 2025 OpenDCS Consortium and its Contributors
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ */
+
+/*
 *  $Id$
 */
 package decodes.db;
@@ -274,7 +289,7 @@ public abstract class DatabaseIO
 	 @param pl the list to populate
 	 @param tmType the transport medium type to filter on
 	 */
-	public abstract PlatformList readPlatformList(PlatformList pl, String tmType)
+	public abstract void readPlatformList(PlatformList pl, String tmType)
 			throws DatabaseException;
 
 
@@ -383,7 +398,7 @@ public abstract class DatabaseIO
 	* </p>
 	  @param p the platform to read
 	*/
-	public abstract Platform readPlatform( Platform p )
+	public abstract void readPlatform( Platform p )
 		throws DatabaseException;
 
 	/**
@@ -518,7 +533,6 @@ public abstract class DatabaseIO
 	 * Returns the most recent data that the platform list was modified, this
 	 * will be the time of the most-recent platform mod.
 	 * @return the most recent data that the platform list was modified.
-	 * @throws DatabaseException
 	 */
 	public abstract Date getPlatformListLMT();
 

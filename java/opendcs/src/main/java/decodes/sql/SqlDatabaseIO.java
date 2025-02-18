@@ -1,4 +1,19 @@
 /*
+ * Copyright 2025 OpenDCS Consortium and its Contributors
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ */
+
+/*
  * $Id: SqlDatabaseIO.java,v 1.15 2020/02/14 15:13:44 mmaloney Exp $
  *
  * Open Source Software
@@ -656,13 +671,13 @@ public class SqlDatabaseIO
      *  @param tmType the transport medium type to filter on.
      */
     @Override
-    public synchronized PlatformList readPlatformList(PlatformList pl, String tmType)
+    public synchronized void readPlatformList(PlatformList pl, String tmType)
             throws DatabaseException
     {
         try (Connection conn = getConnection())
         {
             _platformListIO.setConnection(conn);
-            return _platformListIO.read(pl, tmType);
+            _platformListIO.read(pl, tmType);
         }
         catch (SQLException ex)
         {
@@ -774,10 +789,11 @@ public class SqlDatabaseIO
     @Override
     public synchronized List<RoutingStatus> readRoutingSpecStatus() throws DatabaseException
     {
-        try (Connection conn = getConnection())
+        try (Connection conn = getConnection();
+            LoadingAppDAI loadingAppDAO = makeLoadingAppDAO())
         {
             _routingSpecListIO.setConnection(conn);
-           return _routingSpecListIO.readRoutingSpecStatus(makeLoadingAppDAO());
+           return _routingSpecListIO.readRoutingSpecStatus(loadingAppDAO);
         }
         catch (SQLException ex)
         {
@@ -1183,13 +1199,13 @@ public class SqlDatabaseIO
       @param p the object to populate from the database.
     */
     @Override
-    public synchronized Platform readPlatform(Platform p)
+    public synchronized void readPlatform(Platform p)
         throws DatabaseException
     {
         try (Connection conn = getConnection())
         {
             _platformListIO.setConnection(conn);
-            return _platformListIO.readPlatform(p);
+            _platformListIO.readPlatform(p);
         }
         catch (SQLException ex)
         {
