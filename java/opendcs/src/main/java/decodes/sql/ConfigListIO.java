@@ -1,6 +1,7 @@
 package decodes.sql;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -347,37 +348,32 @@ public class ConfigListIO extends SqlDbObjIo
     * ancillary data (ConfigSensors, etc.)  If a PlatformConfig with the
     * desired ID number is already in memory, this re-reads its data.
     * This returns a reference to the PlatformConfig.
-    * @param id the database ID
+    * @param pc the database ID
     */
-    public PlatformConfig readConfig(DbKey id)
+    public void readConfig(PlatformConfig pc)
         throws DatabaseException, SQLException
     {
-        Statement stmt = null;
+        String q = "SELECT id, name, description, equipmentId " +
+                "FROM PlatformConfig WHERE ID = (?)";
 
-        try
+        log.trace("Executing '{}'", q);
+
+        try (PreparedStatement ps = connection.prepareStatement(q))
         {
-            stmt = createStatement();
-
-            String q = "SELECT id, name, description, equipmentId " +
-                       "FROM PlatformConfig WHERE ID = " + id;
-
-            log.trace("Executing '{}'", q);
-            ResultSet rs = stmt.executeQuery(q);
-
-            if (rs == null || !rs.next())
+            ps.setLong(1, pc.getId().getValue());
+            try (ResultSet rs = ps.executeQuery(q))
             {
-                Throwable thr = new ValueNotFoundException(
-                    "No PlatformConfig found with ID " + id);
-                throw new DatabaseException(
-                        "No PlatformConfig found with ID " + id, thr);
-            }
+                if(rs == null || !rs.next())
+                {
+                    Throwable thr = new ValueNotFoundException(
+                            String.format("No PlatformConfig found with ID %d", pc.getId().getValue()));
+                    throw new DatabaseException(
+                            String.format("No PlatformConfig found with ID %d", pc.getId().getValue()), thr);
+                }
 
-            return putConfig(id, rs);
-        }
-        finally
-        {
-            if (stmt != null)
-                try { stmt.close(); } catch(Exception ex) {}
+                PlatformConfig ret = putConfig(pc.getId(), rs);
+                pc.copyFrom(ret);
+            }
         }
     }
 
@@ -398,7 +394,10 @@ public class ConfigListIO extends SqlDbObjIo
         if (pc != null)
             return pc;
 
-        return readConfig(id);
+        pc = new PlatformConfig();
+        pc.setId(id);
+        readConfig(pc);
+        return pc;
     }
 
     /**
@@ -796,7 +795,6 @@ public class ConfigListIO extends SqlDbObjIo
     /**
     * This "ingests" the information about a DecodesScript from one row
     * of a ResultSet.
-    * @param pcId the platform config ID
     * @param rs  the JDBC result set
     * @param pc the PlatformConfig that owns the script
     */
