@@ -266,17 +266,17 @@ public class RoutingSpecListIO extends SqlDbObjIo
                    {
                        if(seid == ars.getScheduleEntryId().getValue())
                        {
-                           long x = resultSet.getLong(2);
-                           if(!resultSet.wasNull())
+                           Date x = getDateFromRS(resultSet, 2);
+                           if(x != null)
                            {
-                               ars.setLastActivityTime(new Date(x));
+                                ars.setLastActivityTime(x);
                            }
                            ars.setNumMessages(resultSet.getInt(3));
                            ars.setNumDecodesErrors(resultSet.getInt(4));
-                           x = resultSet.getLong(5);
-                           if(!resultSet.wasNull())
+                           x = getDateFromRS(resultSet, 5);
+                           if(x != null)
                            {
-                               ars.setLastMessageTime(new Date(x));
+                                ars.setLastMessageTime(x);
                            }
                            break;
                        }
@@ -316,6 +316,27 @@ public class RoutingSpecListIO extends SqlDbObjIo
         }
     }
 
+    private Date getDateFromRS(ResultSet rs, int idx) throws SQLException
+    {
+        try
+        {
+            Date x = rs.getDate(idx);
+            if (!rs.wasNull())
+            {
+                return x;
+            }
+        }
+        catch (ArrayIndexOutOfBoundsException exception)
+        {
+            Long x = rs.getLong(idx);
+            if (!rs.wasNull())
+            {
+                return new Date(x);
+            }
+        }
+        return null;
+    }
+
     public List<RoutingExecStatus> readRoutingExecStatus(DbKey scheduleEntryId) throws DatabaseException
     {
         List<RoutingExecStatus> ret = new ArrayList<>();
@@ -341,13 +362,13 @@ public class RoutingSpecListIO extends SqlDbObjIo
                 res.setRoutingSpecId(rs.getLong(1));
                 res.setScheduleEntryId(rs.getLong(3));
                 res.setRoutingExecId(rs.getLong(4));
-                res.setRunStart(new Date(rs.getLong(5)));
-                long x = rs.getLong(6);
+                res.setRunStart(rs.getDate(5));
+                Date x = rs.getDate(6);
                 if (!rs.wasNull())
-                    res.setRunStop(new Date(x));
-                x = rs.getLong(7);
+                    res.setRunStop(x);
+                x = rs.getDate(7);
                 if (!rs.wasNull())
-                    res.setLastMsgTime(new Date(x));
+                    res.setLastMsgTime(x);
                 res.setHostname(rs.getString(8));
                 res.setRunStatus(rs.getString(9));
                 res.setNumMessages(rs.getInt(10));
@@ -355,7 +376,7 @@ public class RoutingSpecListIO extends SqlDbObjIo
                 res.setNumPlatforms(rs.getInt(12));
                 res.setLastInput(rs.getString(13));
                 res.setLastOutput(rs.getString(14));
-                res.setLastActivity(new Date(rs.getLong(15)));
+                res.setLastActivity(rs.getDate(15));
                 ret.add(res);
             }
         }
