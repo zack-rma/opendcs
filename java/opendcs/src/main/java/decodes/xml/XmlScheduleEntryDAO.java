@@ -143,13 +143,20 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 		ArrayList<ScheduleEntry> ses = listScheduleEntries(null);
 		for(ScheduleEntry se : ses)
 		{
-			if(se.getId().equals(id))
+			if(se.getKey().equals(id))
 			{
 				return se;
 			}
 		}
 		return null;
 	}
+
+	@Override
+	public ScheduleEntry readScheduleEntryByStatusId(DbKey statusId)
+	{
+		throw new UnsupportedOperationException("XML Database does not support this operation.");
+	}
+
 
 	@Override
 	public boolean checkScheduleEntry(ScheduleEntry scheduleEntry)
@@ -269,16 +276,7 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 			throw new DbIoException("Error reading status file: " + ex);
 		}
 	}
-
-	/**
-	 * This method is not supported for XML databases.
-	 */
-	@Override
-	public ScheduleEntryStatus readScheduleStatusById(DbKey scheduleEntryStatusId)
-	{
-		throw new UnsupportedOperationException("XML Database does not support readScheduleStatusById.");
-	}
-
+	
 	/**
 	 * Reads the next ScheduleEntryStatus from the file, starting at the current
 	 * position.
@@ -353,7 +351,7 @@ public class XmlScheduleEntryDAO implements ScheduleEntryDAI
 			throw new DbIoException("Cannot open '" + fn + "': " + ex);
 		}
 	}
-
+	
 	@Override
 	public synchronized void writeScheduleStatus(ScheduleEntryStatus ses)
 		throws DbIoException
