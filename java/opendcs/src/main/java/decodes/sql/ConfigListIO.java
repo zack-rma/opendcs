@@ -354,11 +354,12 @@ public class ConfigListIO extends SqlDbObjIo
         throws DatabaseException, SQLException
     {
         String q = "SELECT id, name, description, equipmentId " +
-                "FROM PlatformConfig WHERE ID = (?)";
+                "FROM PlatformConfig WHERE ID = ?";
 
         log.trace("Executing '{}'", q);
 
-        try (PreparedStatement ps = connection.prepareStatement(q))
+        try (Connection conn = connection();
+             PreparedStatement ps = conn.prepareStatement(q))
         {
             ps.setLong(1, pc.getId().getValue());
             try (ResultSet rs = ps.executeQuery())
@@ -371,8 +372,11 @@ public class ConfigListIO extends SqlDbObjIo
                             String.format("No PlatformConfig found with ID %d", pc.getId().getValue()), thr);
                 }
 
-                PlatformConfig ret = putConfig(pc.getId(), rs);
-                pc.copyFrom(ret);
+                PlatformConfig conf = putConfig(pc.getId(), rs);
+                if (!_dbio._isOracle)
+                {
+                    pc.copyFrom(conf);
+                }
             }
         }
     }
@@ -717,6 +721,11 @@ public class ConfigListIO extends SqlDbObjIo
         String q =
             "DELETE FROM PlatformConfig WHERE ID = " + pc.getId();
         executeUpdate(q);
+        PlatformConfig pc2 = _pcList.getById(pc.getId());
+        if (pc2 != null)
+        {
+            _pcList.remove(pc2);
+        }
     }
 
     /**

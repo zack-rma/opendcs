@@ -1,6 +1,7 @@
 package decodes.sql;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -188,7 +189,7 @@ public class PlatformListIO extends SqlDbObjIo
 
         _pList = platformList;
 
-        try (Statement stmt = createStatement())
+        try (Connection conn = connection())
         {
             String q =
                     (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_7) ?
@@ -202,9 +203,10 @@ public class PlatformListIO extends SqlDbObjIo
                                     "LastModifyTime, Expiration " +
                                     "FROM Platform");
 
+            String filter = null;
             if (tmType != null)
             {
-                String filter;
+
                 // Note: "goes" matches goes, goes-self-timed or goes-random
                 tmType = tmType.toLowerCase();
                 if (tmType.equals("goes"))
@@ -213,67 +215,78 @@ public class PlatformListIO extends SqlDbObjIo
                 }
                 else
                 {
-                    filter = String.format("'%s'", tmType);
+                    filter = String.format("'%s'", tmType.toLowerCase());
                 }
 
-                q = q + " where exists(select PLATFORMID from TRANSPORTMEDIUM where lower(MEDIUMTYPE) IN ("
-                        + filter + ") and PLATFORM.ID = PLATFORMID)";
+                q = q + " where exists(select PLATFORMID from TRANSPORTMEDIUM" +
+                        " where lower(MEDIUMTYPE) IN (?) and PLATFORM.ID = PLATFORMID)";
             }
 
-            log.debug("Executing query '{}'", q );
-            try (ResultSet rs = stmt.executeQuery(q))
+            try (PreparedStatement stmt = conn.prepareStatement(q))
             {
-                if (rs != null)
+                if(tmType != null && filter != null)
                 {
-                    while (rs.next())
+                    stmt.setString(1, tmType);
+                }
+
+                log.debug("Executing query '{}'", q);
+                try (ResultSet rs = stmt.executeQuery())
+                {
+                    if (rs != null)
                     {
-                        DbKey platformId = DbKey.createDbKey(rs, 1);
-
-                        // MJM 20041027 Check to see if this ID is already in the
-                        // cached platform list and ignore if so. That way, I can
-                        // periodically refresh the platform list to get any newly
-                        // created platforms after the start of the routing spec.
-                        // Refreshing will not affect previously read/used platforms.
-                        Platform p = _pList.getById(platformId);
-                        if (p != null)
-                            continue;
-
-                        p = new Platform(platformId);
-                        _pList.add(p);
-
-                        p.agency = rs.getString(2);
-
-                        DbKey siteId = DbKey.createDbKey(rs, 4);
-                        if (!rs.wasNull()) {
-                            if (p.getDatabase().siteList.size() == 0)
-                            {
-                                p.getDatabase().siteList.read();
-                            }
-                            p.setSite(p.getDatabase().siteList.getSiteById(siteId));
-                        }
-
-                        DbKey configId = DbKey.createDbKey(rs, 5);
-                        if (!rs.wasNull())
+                        while (rs.next())
                         {
-                            PlatformConfig pc =
-                                    platformList.getDatabase().platformConfigList.getById(
-                                            configId);
-                            if (pc == null)
-                                pc = _configListIO.getConfig(configId);
-                            p.setConfigName(pc.configName);
-                            p.setConfig(pc);
+                            DbKey platformId = DbKey.createDbKey(rs, 1);
+
+                            // MJM 20041027 Check to see if this ID is already in the
+                            // cached platform list and ignore if so. That way, I can
+                            // periodically refresh the platform list to get any newly
+                            // created platforms after the start of the routing spec.
+                            // Refreshing will not affect previously read/used platforms.
+                            Platform p = _pList.getById(platformId);
+                            if (p != null)
+                            {
+                                continue;
+                            }
+
+                            p = new Platform(platformId);
+                            _pList.add(p);
+
+                            p.agency = rs.getString(2);
+
+                            DbKey siteId = DbKey.createDbKey(rs, 4);
+                            if (!rs.wasNull())
+                            {
+                                p.setSite(p.getDatabase().siteList.getSiteById(siteId));
+                            }
+
+                            DbKey configId = DbKey.createDbKey(rs, 5);
+                            if (!rs.wasNull())
+                            {
+                                PlatformConfig pc = platformList.getDatabase().platformConfigList.getById(configId);
+                                if (pc == null)
+                                {
+                                    pc = _configListIO.getConfig(configId);
+                                }
+                                p.setConfigName(pc.configName);
+                                p.setConfig(pc);
+                            }
+
+                            String desc = rs.getString(6);
+                            if (!rs.wasNull())
+                            {
+                                p.setDescription(desc);
+                            }
+
+                            p.lastModifyTime = getTimeStamp(rs, 7, null);
+
+                            p.expiration = getTimeStamp(rs, 8, p.expiration);
+
+                            if (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_7)
+                            {
+                                p.setPlatformDesignator(rs.getString(9));
+                            }
                         }
-
-                        String desc = rs.getString(6);
-                        if (!rs.wasNull())
-                            p.setDescription(desc);
-
-                        p.lastModifyTime = getTimeStamp(rs, 7, null);
-
-                        p.expiration = getTimeStamp(rs, 8, p.expiration);
-
-                        if (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_7)
-                            p.setPlatformDesignator(rs.getString(9));
                     }
                 }
             }
@@ -419,133 +432,132 @@ public class PlatformListIO extends SqlDbObjIo
 
     /**
     * This reads the "complete" data for the given Platform.
-    * @param p the Platform object with the ID set
+    * @param p the Platform object to populate, must have its ID set
     */
     public void readPlatform(Platform p)
         throws SQLException, DatabaseException
     {
         final AtomicBoolean resultsExist = new AtomicBoolean(false);
-        String q = "SELECT " + getColTpl() + " FROM Platform WHERE ID = ?";
-        log.debug("readPlatform() Executing '{}'", q );
-        getDaoHelper().doQuery(q, rs ->
-        {
-            resultsExist.set(true);
-            // Can only be 1 platform with a given ID.
+            String q = "SELECT " + getColTpl() + " FROM Platform WHERE ID = ?";
+            log.debug("readPlatform() Executing '{}'", q );
+            getDaoHelper().doQuery(q, rs ->
             {
-                p.setAgency(rs.getString(2));
-
-                p.isProduction = TextUtil.str2boolean(rs.getString(3));
-
-                DbKey siteId = DbKey.createDbKey(rs, 4);
-                if (!rs.wasNull())
+                resultsExist.set(true);
+                // Can only be 1 platform with a given ID.
                 {
-                    // If site was previously loaded, use it.
-                    p.setSite(p.getDatabase().siteList.getSiteById(siteId));
+                    p.setAgency(rs.getString(2));
 
-                    try(SiteDAI siteDAO = _dbio.makeSiteDAO())
+                    p.isProduction = TextUtil.str2boolean(rs.getString(3));
+
+                    DbKey siteId = DbKey.createDbKey(rs, 4);
+                    if (!rs.wasNull())
                     {
-                        siteDAO.setManualConnection(connection);
-                        if (p.getSite() == null)
+                        // If site was previously loaded, use it.
+                        p.setSite(p.getDatabase().siteList.getSiteById(siteId));
+
+                        try(SiteDAI siteDAO = _dbio.makeSiteDAO())
                         {
-                            if (!DbKey.isNull(siteId))
+                            siteDAO.setManualConnection(connection);
+                            if (p.getSite() == null)
+                            {
+                                if (!DbKey.isNull(siteId))
+                                {
+                                    try
+                                    {
+                                        p.setSite(siteDAO.getSiteById(siteId));
+                                        p.getDatabase().siteList.addSite(p.getSite());
+                                    }
+                                    catch(Exception ex)
+                                    {
+                                        log.warn("Platform {} id={} has invalid siteID {}",
+                                                p.getDisplayName(), p.getKey(), siteId);
+                                        p.setSite(null);
+                                    }
+                                }
+                            }
+                            else
                             {
                                 try
                                 {
-                                    p.setSite(siteDAO.getSiteById(siteId));
-                                    p.getDatabase().siteList.addSite(p.getSite());
+                                    siteDAO.readSite(p.getSite());
                                 }
-                                catch(Exception ex)
+                                catch (Exception e)
                                 {
-                                    log.warn("Platform {} id={} has invalid siteID {}",
-                                            p.getDisplayName(), p.getKey(), siteId);
-                                    p.setSite(null);
+                                    log.error("An error occurred reading site {}",
+                                            p.getSite(),e);
                                 }
                             }
                         }
-                        else
+                    }
+
+                    DbKey configId = DbKey.createDbKey(rs, 5);
+                    if (!rs.wasNull())
+                    {
+                        // Get config out of database's list.
+                        PlatformConfig pc =
+                            p.getDatabase().platformConfigList.getById(configId);
+                        boolean commitAfterSelect = _dbio.commitAfterSelect;
+                        try
                         {
-                            try
+                            // Caller will commit after THIS method returns, so don't
+                            // have it commit after we read the site.
+                            _dbio.commitAfterSelect = false;
+
+                            if (pc == null)
                             {
-                                siteDAO.readSite(p.getSite());
+                                pc = new PlatformConfig();
+                                pc.setId(configId);
+                                // Not in database's list yet? Add it.
+                                _configListIO.readConfig(pc);
+                                p.getDatabase().platformConfigList.add(pc);
                             }
-                            catch (Exception e)
-                            {
-                                log.error("An error occurred reading site {}",
-                                        p.getSite(),e);
-                            }
+                            // Already in list. Check to see if it's current.
+                            else
+                                _configListIO.readConfig(pc);
+                        }
+                        catch(DatabaseException e)
+                        {
+                            throw new SQLException(e);
+                        }
+                        finally
+                        {
+                            _dbio.commitAfterSelect = commitAfterSelect;
+                        }
+
+                        if (pc != null)
+                        {
+                            p.setConfigName(pc.configName);
+                            p.setConfig(pc);
+                        }
+                    }
+
+                    p.setDescription(rs.getString(6));
+                    p.lastModifyTime = getTimeStamp(rs, 7, p.lastModifyTime);
+                    p.expiration = getTimeStamp(rs, 8, p.expiration);
+                    if (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_7)
+                        p.setPlatformDesignator(rs.getString(9));
+
+                    readTransportMedia(p);
+
+                    if (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_6)
+                    {
+                        PropertiesDAI propsDao = _dbio.makePropertiesDAO();
+                        propsDao.setManualConnection(connection);
+                        try {
+                            propsDao.readProperties("PlatformProperty", "platformID", p.getId(),
+                            p.getProperties());
+                        }
+                        catch (DbIoException e)
+                        {
+                            throw new SQLException(e);
+                        }
+                        finally
+                        {
+                            propsDao.close();
                         }
                     }
                 }
-
-                DbKey configId = DbKey.createDbKey(rs, 5);
-                if (!rs.wasNull())
-                {
-                    // Get config out of database's list.
-                    PlatformConfig pc =
-                        p.getDatabase().platformConfigList.getById(configId);
-                    boolean commitAfterSelect = _dbio.commitAfterSelect;
-                    try
-                    {
-                        // Caller will commit after THIS method returns, so don't
-                        // have it commit after we read the site.
-                        _dbio.commitAfterSelect = false;
-
-                        if (pc == null)
-                        {
-                            // Not in database's list yet? Add it.
-                            pc = new PlatformConfig();
-                            pc.setId(configId);
-                            _configListIO.readConfig(pc);
-                            p.getDatabase().platformConfigList.add(pc);
-                        }
-                        // Already in list. Check to see if it's current.
-                        else
-                            _configListIO.readConfig(pc);
-                    }
-                    catch(DatabaseException e)
-                    {
-                        throw new SQLException(e);
-                    }
-                    finally
-                    {
-                        _dbio.commitAfterSelect = commitAfterSelect;
-                    }
-
-                    if (pc != null)
-                    {
-                        p.setConfigName(pc.configName);
-                        p.setConfig(pc);
-                    }
-                }
-
-                p.setDescription(rs.getString(6));
-                p.lastModifyTime = getTimeStamp(rs, 7, p.lastModifyTime);
-                p.expiration = getTimeStamp(rs, 8, p.expiration);
-                if (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_7)
-                    p.setPlatformDesignator(rs.getString(9));
-
-                readTransportMedia(p);
-
-                if (getDatabaseVersion() >= DecodesDatabaseVersion.DECODES_DB_6)
-                {
-                    PropertiesDAI propsDao = _dbio.makePropertiesDAO();
-                    propsDao.setManualConnection(connection);
-                    try {
-                        propsDao.readProperties("PlatformProperty", "platformID", p.getId(),
-                        p.getProperties());
-                    }
-                    catch (DbIoException e)
-                    {
-                        throw new SQLException(e);
-                    }
-                    finally
-                    {
-                        propsDao.close();
-                    }
-                }
-            }
-        },p.getId().getValue());
-
+            },p.getId().getValue());
         if (!resultsExist.get())
         {
             String msg = "Platform with ID " + p.getId() + " not found.";
