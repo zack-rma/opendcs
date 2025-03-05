@@ -373,13 +373,7 @@ public class ConfigListIO extends SqlDbObjIo
                 }
 
                 PlatformConfig config = putConfig(pc.getId(), rs);
-                // Checks whether the PlatformConfig has been copied correctly.
-                // Required check for REST API, since data is not properly copied without this line.
-                // Without the check, attempting to copy data this way will result in failing Toolkit tests.
-                if (!(pc.getName()).equalsIgnoreCase(config.getName()))
-                {
-                    pc.copyFrom(config);
-                }
+                pc.copyFrom(config);
             }
         }
     }
