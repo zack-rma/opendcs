@@ -351,18 +351,21 @@ public class ComputationApp extends TsdbAppTemplate
 						DbComputation[] comps = resolver.resolve(dataCollection);
 
 						action = "Applying computations";
-						ComputationExecution execution = new ComputationExecution(theDb);
+						ComputationExecution execution = new ComputationExecution(db);
 
-						execution.execute(List.of(comps), dataCollection);
-						compsTried += execution.getComputesTried();
-						compErrors += execution.getNumErrors();
+						ComputationExecution.CompResults results = execution.execute(List.of(comps), dataCollection);
+						compsTried += results.getNumComputesTried();
+						compErrors += results.getNumErrors();
 
 						action = "Saving results";
 						List<CTimeSeries> tsList = dataCollection.getAllTimeSeries();
 						log.trace("{} {} time series in data.", action, tsList.size());
 						for(CTimeSeries ts : tsList)
 						{
-							try { timeSeriesDAO.saveTimeSeries(ts); }
+							try
+							{
+								timeSeriesDAO.saveTimeSeries(ts);
+							}
 							catch(Exception ex)
 							{
 								log.atWarn()
@@ -377,7 +380,10 @@ public class ComputationApp extends TsdbAppTemplate
 					}
 					else // MJM 6.4 RC08 Only sleep if data was empty.
 					{
-						try { Thread.sleep(COMP_RUN_WAIT_TIME); }
+						try
+						{
+							Thread.sleep(COMP_RUN_WAIT_TIME);
+						}
 						catch(InterruptedException ex) {}
 					}
 
@@ -791,26 +797,17 @@ public class ComputationApp extends TsdbAppTemplate
 			until = timedCompCal.getTime();
 		}
 
-		ComputationExecution execution = new ComputationExecution(theDb);
+		ComputationExecution execution = new ComputationExecution(db);
 
 		log.debug("Executing comp '{}' over time period {} to {}", tc.getName(), since, until);
 		if (!DbKey.isNull(tc.getGroupId()))
 		{
 			ArrayList<DbComputation> executeList = expandForGroup(tc, timeSeriesDAO, tsGroupDAO);
-			for(DbComputation concreteClone : executeList)
-			{
-				try (MDCCloseable mdc = MDC.putCloseable("computation", concreteClone.getName()))
-				{
-					execution.executeSingleComp(concreteClone, since, until, dataCollection, timeSeriesDAO);
-				}
-			}
+			execution.execute(executeList, dataCollection, since, until);
 		}
 		else // Not a group computation, just execute.
 		{
-			try (MDCCloseable mdc = MDC.putCloseable("computation", tc.getName()))
-			{
-				execution.executeSingleComp(tc, since, until, dataCollection, timeSeriesDAO);
-			}
+			execution.executeSingleComp(tc, since, until, dataCollection);
 		}
 
 	}
