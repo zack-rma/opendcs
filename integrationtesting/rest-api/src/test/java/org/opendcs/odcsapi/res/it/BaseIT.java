@@ -68,6 +68,7 @@ class BaseIT
 {
 	protected static String authHeader = null;
 	protected static RequestSpecification authSpec = null;
+	private static Cookie cookie;
 
 	<T> T getDtoFromResource(String filename, Class<T> dtoType) throws Exception
 	{
@@ -147,7 +148,7 @@ class BaseIT
 		session.setPrincipal(mcup);
 		session.setAttribute(OpenDcsPrincipal.USER_PRINCIPAL_SESSION_ATTRIBUTE, mcup);
 		
-		Cookie cookie = new Cookie.Builder("JSESSIONID", COOKIE)
+		cookie = new Cookie.Builder("JSESSIONID", COOKIE)
 								  .setHttpOnly(true)
 								  .setSecured(true)
 								  .setMaxAge(-1)
@@ -172,6 +173,15 @@ class BaseIT
 		.assertThat()
 			.statusCode(is(Response.Status.OK.getStatusCode()))
 		;
+	}
+
+	String getCookie()
+	{
+		if (cookie == null)
+		{
+			authenticate();
+		}
+		return String.format("%s=%s", cookie.getName(), cookie.getValue());
 	}
 
 	static void logout(SessionFilter sessionFilter)
